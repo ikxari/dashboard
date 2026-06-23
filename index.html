@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
 <style>
 :root{
   --bg:#070710; --txt:#eef0f7; --muted:#9aa0b4;
@@ -105,6 +106,13 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 .box{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:20px;margin-bottom:18px}
 .box h4{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .box .desc{font-size:13px;color:var(--muted);line-height:1.6}
+.chartbox{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:18px 14px 6px;margin-bottom:18px}
+.chartbox h4{font-size:15px;font-weight:600;margin:0 4px 6px;padding:0 4px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.pagehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px}
+.pagehead h3{font-size:20px;font-weight:700}
+.pagehead .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
 .welcome{background:linear-gradient(160deg,rgba(124,92,255,.16),rgba(70,181,255,.06));border:1px solid var(--brd);
   border-radius:18px;padding:26px;margin-bottom:20px}
 .welcome h3{font-size:22px;font-weight:700;margin-bottom:5px}
@@ -298,7 +306,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycby5ReFLNzJPfRr-YQTIEyWNWqIe-zwjParkHw0iE9QCRgkoZztOHIPUtdFKh95vOFCp/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbxckTvEk1gUQb5mp_GTTajokO-Yg4AKNWK8sjwBY6q7Fo1a4RR_556t4b0AtY83q0Id/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -400,7 +408,7 @@ function doReset(){
 let ME=null;
 const TABS=[
   {id:'overview', label:'Overview',        rank:1},
-  {id:'sales',    label:'Sales Analytics', rank:1, soon:true},
+  {id:'sales',    label:'Sales Analytics', rank:1},
   {id:'returns',  label:'Returns',         rank:1, soon:true},
   {id:'inventory',label:'Inventory',       rank:1, soon:true},
   {id:'ims',      label:'IMS Center',      rank:1, soon:true},
@@ -441,6 +449,7 @@ function openTab(id){
   const tab=TABS.find(t=>t.id===id);
   if(tab && tab.soon)return renderSoon(tab.label);
   if(id==='overview')return renderOverview();
+  if(id==='sales')return renderSales();
   if(id==='users')return renderUsers();
   if(id==='activity')return renderActivity();
   if(id==='audit')return renderAudit();
@@ -448,26 +457,113 @@ function openTab(id){
 }
 function setContent(html){$('content').innerHTML='<div class="page show">'+html+'</div>';}
 
-/* ---------- Overview ---------- */
+/* ---------- formatters + chart helper ---------- */
+function inr(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function inrS(n){ n=n||0; var a=Math.abs(n);
+  if(a>=1e7) return '₹'+(n/1e7).toFixed(2)+' Cr';
+  if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+' L';
+  if(a>=1e3) return '₹'+(n/1e3).toFixed(1)+'k';
+  return '₹'+Math.round(n); }
+const CHART_BASE={ chart:{ background:'transparent', fontFamily:'Jost', toolbar:{show:false}, animations:{easing:'easeinout',speed:600} },
+  theme:{mode:'dark'}, grid:{borderColor:'rgba(255,255,255,.07)',strokeDashArray:4},
+  tooltip:{theme:'dark'}, dataLabels:{enabled:false}, legend:{labels:{colors:'#9aa0b4'}},
+  colors:['#7c5cff','#46b5ff','#37d399','#ffb547','#ff5d6c','#c9bdff'] };
+function chart(elId,opt){ var el=$(elId); if(!el||typeof ApexCharts==='undefined')return;
+  if(el._c){try{el._c.destroy()}catch(e){}} el._c=new ApexCharts(el,opt); el._c.render(); }
+function statCard(label,n,sub){return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+label+(sub?' · '+sub:'')+'</div><div class="bar"></div></div>';}
+function pagehead(title,sub,tab){return '<div class="pagehead"><div><h3>'+esc(title)+'</h3><div class="sub">'+esc(sub)+'</div></div>'+
+  '<button class="btn ghost sm" onclick="openTab(\''+tab+'\')">↻ Refresh</button></div>';}
+function loadingBox(){return '<div class="soon"><div class="ic">⏳</div><h3>Loading…</h3><p>Fetching live data from your sheet.</p></div>';}
+function noData(msg){return '<div class="soon"><div class="ic">📭</div><h3>No data</h3><p>'+esc(msg||'Nothing to show yet.')+'</p></div>';}
+
+/* ---------- Overview (live) ---------- */
 function renderOverview(){
-  setContent(
-    '<div class="welcome"><h3>Welcome, '+esc(ME.fullName)+' 👋</h3>'+
-    '<p>You are signed in as <b style="color:#c9bdff">'+esc(ME.role)+'</b>. '+
-    'The authentication & access-control layer is live. Analytics modules light up in the next build phase.</p></div>'+
-    '<div class="cards">'+
-      statCard('Your role',esc(ME.role))+
-      statCard('Department',esc(ME.department||'—'))+
-      statCard('Employee ID',esc(ME.employeeId||'—'))+
-      statCard('Access level','Tier '+ME.rank)+
-    '</div>'+
-    '<div class="box"><h4>🚀 What\'s active now</h4>'+
-      '<p class="desc">Secure login with OTP email verification, password reset, role-based access (Super Admin · Admin · Manager · Employee), '+
-      'user creation with automated welcome emails, signup approvals, and login-activity tracking. '+
-      'Sales, inventory, IMS, GST, CRM, vendor and expense dashboards are scheduled for the upcoming phases.</p></div>'+
-    (ME.rank>=3?'<div class="box"><h4>🛠️ Admin shortcut</h4><p class="desc" style="margin-bottom:12px">Manage your team from the User Management tab.</p><button class="btn sm" onclick="openTab(\'users\')">Open User Management</button></div>':'')
-  );
+  setContent(pagehead('Executive Overview','Live snapshot from Master Sales & Expenses','overview')+'<div id="ov">'+loadingBox()+'</div>');
+  api({action:'getOverview',token:tGet()}).then(d=>{
+    if(!d.ok)return ($('ov').innerHTML=errBox(d));
+    const k=d.kpis;
+    $('ov').innerHTML=
+      '<div class="cards">'+
+        statCard('Revenue',inrS(k.revenue))+
+        statCard('Net Sales',inrS(k.netSales))+
+        statCard('Gross Profit',inrS(k.grossProfit),k.margin.toFixed(1)+'%')+
+        statCard('Net Profit',inrS(k.netProfit))+
+        statCard('Orders',Number(k.orders).toLocaleString('en-IN'))+
+        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'))+
+        statCard('GST',inrS(k.gst))+
+        statCard('Expenses',inrS(k.expense))+
+      '</div>'+
+      '<div class="chartbox"><h4>📈 Sales & gross-profit trend</h4><div id="ovTrend"></div></div>'+
+      '<div class="grid2">'+
+        '<div class="chartbox"><h4>🏆 Top items by sales</h4><div id="ovItems"></div></div>'+
+        '<div class="chartbox"><h4>💸 Expense by category</h4><div id="ovExp"></div></div>'+
+      '</div>';
+    drawTrend('ovTrend',d.trend);
+    const ti=(d.topItems||[]);
+    chart('ovItems',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'bar',height:300}),
+      plotOptions:{bar:{horizontal:true,borderRadius:5,barHeight:'62%'}},
+      series:[{name:'Sales',data:ti.map(x=>Math.round(x.sales))}],
+      xaxis:{categories:ti.map(x=>x.name),labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}},
+      yaxis:{labels:{style:{colors:'#9aa0b4'}}}}));
+    const ec=(d.expenseCats||[]);
+    chart('ovExp',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'donut',height:300}),
+      labels:ec.map(x=>x.name),series:ec.map(x=>Math.round(x.amount)),
+      legend:{position:'bottom',labels:{colors:'#9aa0b4'}},
+      tooltip:{theme:'dark',y:{formatter:v=>inr(v)}}}));
+  }).catch(e=>$('ov').innerHTML=connBox(e));
 }
-function statCard(label,n){return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+label+'</div><div class="bar"></div></div>';}
+function drawTrend(elId,trend){
+  trend=trend||[];
+  chart(elId,Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'area',height:300}),
+    stroke:{curve:'smooth',width:2}, fill:{type:'gradient',gradient:{opacityFrom:.4,opacityTo:.05}},
+    series:[{name:'Net Sales',data:trend.map(x=>Math.round(x.sales))},{name:'Gross Profit',data:trend.map(x=>Math.round(x.gp))}],
+    xaxis:{categories:trend.map(x=>x.date),labels:{style:{colors:'#9aa0b4'},rotate:-45,hideOverlappingLabels:true}},
+    yaxis:{labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}}}));
+}
+
+/* ---------- Sales Analytics (live) ---------- */
+function renderSales(){
+  setContent(pagehead('Sales Analytics','Revenue, profit and performance — live','sales')+'<div id="sa">'+loadingBox()+'</div>');
+  api({action:'getSales',token:tGet()}).then(d=>{
+    if(!d.ok)return ($('sa').innerHTML=errBox(d));
+    const k=d.kpis;
+    $('sa').innerHTML=
+      '<div class="cards">'+
+        statCard('Revenue',inrS(k.revenue))+
+        statCard('Net Sales',inrS(k.netSales))+
+        statCard('Gross Profit',inrS(k.grossProfit))+
+        statCard('Margin',k.margin.toFixed(1)+'%')+
+        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'))+
+        statCard('Orders',Number(k.orders).toLocaleString('en-IN'))+
+        statCard('Avg Bill',inrS(k.abv))+
+        statCard('GST',inrS(k.gst))+
+      '</div>'+
+      '<div class="chartbox"><h4>📈 Sales trend</h4><div id="saTrend"></div></div>'+
+      '<div class="grid2">'+
+        '<div class="chartbox"><h4>🏆 Top products (by gross)</h4><div id="saTop"></div></div>'+
+        '<div class="chartbox"><h4>👗 Sales-girl performance</h4><div id="saGirls"></div></div>'+
+      '</div>';
+    drawTrend('saTrend',d.trend);
+    const tp=(d.topProducts||[]);
+    chart('saTop',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'bar',height:320}),
+      plotOptions:{bar:{horizontal:true,borderRadius:5,barHeight:'62%'}},
+      series:[{name:'Gross',data:tp.map(x=>Math.round(x.gross))}],
+      xaxis:{categories:tp.map(x=>x.name),labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}},
+      yaxis:{labels:{style:{colors:'#9aa0b4'}}}}));
+    const sg=(d.salesGirls||[]);
+    chart('saGirls',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'bar',height:320}),
+      plotOptions:{bar:{borderRadius:6,columnWidth:'55%'}},colors:['#46b5ff'],
+      series:[{name:'Net Sales',data:sg.map(x=>Math.round(x.sales))}],
+      xaxis:{categories:sg.map(x=>x.name),labels:{style:{colors:'#9aa0b4'},rotate:-40}},
+      yaxis:{labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}}}));
+  }).catch(e=>$('sa').innerHTML=connBox(e));
+}
+
+function errBox(d){ var m=(d&&d.error)||'Error';
+  if(/DATA_SHEET_ID/.test(m)) m='Data sheet not connected yet. Paste your Gofrugal Google Sheet ID into DATA_SHEET_ID in Code.gs, then redeploy.';
+  if(/session/i.test(m)){doLogout();}
+  return '<div class="soon"><div class="ic">⚠️</div><h3>Can\'t load</h3><p>'+esc(m)+'</p></div>'; }
+function connBox(e){ return '<div class="soon"><div class="ic">📡</div><h3>Connection error</h3><p>'+esc(e.message||e)+'</p></div>'; }
 
 /* ---------- Soon ---------- */
 function renderSoon(label){
