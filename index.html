@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>IKXARI ERP</title>
+<title>Ikxarii</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -52,6 +52,11 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
   box-shadow:0 0 0 3px rgba(124,92,255,.18);background:rgba(255,255,255,.06)}
 .field select option{background:#13131c}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pwrap{position:relative}
+.pwrap input{padding-right:44px}
+.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);
+  font-size:17px;background:none;border:none;padding:4px 6px;line-height:1;border-radius:8px}
+.eye:hover{color:var(--txt);background:rgba(255,255,255,.06)}
 .btn{width:100%;padding:13px;border:none;border-radius:12px;cursor:pointer;font-family:'Jost';font-size:15px;
   font-weight:600;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));transition:.2s;
   box-shadow:0 12px 30px rgba(124,92,255,.4);margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
@@ -201,7 +206,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <h2>Welcome back</h2>
         <div class="lead">Sign in to your IKXARI ERP account.</div>
         <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="you@company.com" autocomplete="username"></div>
-        <div class="field"><label>Password</label><input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+        <div class="field"><label>Password</label><div class="pwrap"><input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
         <div class="linkrow"><span></span><a onclick="show('forgot')">Forgot password?</a></div>
         <button class="btn" id="li-btn" onclick="doLogin()">Sign In</button>
         <div class="alt">No account? <a onclick="show('signup')">Create one</a></div>
@@ -223,8 +228,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <select id="su-role"><option>Employee</option><option>Manager</option><option>Admin</option></select>
         </div>
         <div class="row2">
-          <div class="field"><label>Password</label><input id="su-pass" type="password" placeholder="min 6 chars"></div>
-          <div class="field"><label>Confirm</label><input id="su-pass2" type="password" placeholder="repeat"></div>
+          <div class="field"><label>Password</label><div class="pwrap"><input id="su-pass" type="password" placeholder="min 6 chars"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
+          <div class="field"><label>Confirm</label><div class="pwrap"><input id="su-pass2" type="password" placeholder="repeat"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
         </div>
         <button class="btn" id="su-btn" onclick="doSignup()">Create Account</button>
         <div class="alt">Already registered? <a onclick="show('login')">Sign in</a></div>
@@ -251,8 +256,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="otpHint">Enter the code sent to <b id="rs-email"></b> and your new password.</div>
         <div class="field"><label>Reset code</label><input id="rs-code" inputmode="numeric" maxlength="6" placeholder="------" style="letter-spacing:8px;text-align:center;font-size:20px"></div>
         <div class="row2">
-          <div class="field"><label>New password</label><input id="rs-pass" type="password" placeholder="min 6 chars"></div>
-          <div class="field"><label>Confirm</label><input id="rs-pass2" type="password" placeholder="repeat"></div>
+          <div class="field"><label>New password</label><div class="pwrap"><input id="rs-pass" type="password" placeholder="min 6 chars"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
+          <div class="field"><label>Confirm</label><div class="pwrap"><input id="rs-pass2" type="password" placeholder="repeat"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
         </div>
         <button class="btn" id="rs-btn" onclick="doReset()">Reset Password</button>
         <div class="alt"><a onclick="doResend('reset')">Resend code</a> · <a onclick="show('login')">Back to sign in</a></div>
@@ -293,7 +298,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbzkkawzgjfwEhpU-WGIDcaiMd_NdeN7-8qv8M8Ww6_tXfA0bkP9dD2URssmngFvAIr4/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycby5ReFLNzJPfRr-YQTIEyWNWqIe-zwjParkHw0iE9QCRgkoZztOHIPUtdFKh95vOFCp/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -312,6 +317,7 @@ function tClr(){try{localStorage.removeItem('ikxari_token')}catch(e){}}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function $(id){return document.getElementById(id)}
 function val(id){return ($(id).value||'').trim()}
+function tpw(btn){var i=btn.parentElement.querySelector('input');if(i.type==='password'){i.type='text';btn.textContent='🙈';}else{i.type='password';btn.textContent='👁';}}
 
 function toast(msg,type){const t=$('toast');t.textContent=msg;t.className='toast show '+(type||'');setTimeout(()=>t.className='toast '+(type||''),3200);}
 function modalConfirm(o){
@@ -576,7 +582,7 @@ function openCreate(){
     '<div class="row2"><div class="field"><label>Department</label><input id="cu-dept" placeholder="e.g. Sales"></div>'+
     '<div class="field"><label>Employee ID</label><input id="cu-emp" placeholder="e.g. SP-12"></div></div>'+
     '<div class="row2"><div class="field"><label>Role</label><select id="cu-role">'+opts+'</select></div>'+
-    '<div class="field"><label>Password</label><input id="cu-pass" type="password" placeholder="min 6 chars"></div></div>'+
+    '<div class="field"><label>Password</label><div class="pwrap"><input id="cu-pass" type="password" placeholder="min 6 chars"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div></div>'+
     '<button class="btn" id="cu-btn" onclick="confirmCreate()">Create & email credentials</button>');
 }
 function confirmCreate(){
@@ -632,9 +638,9 @@ function renderSettings(){
         statCard('Role',esc(ME.role))+statCard('Department',esc(ME.department||'—'))+
       '</div></div>'+
     '<div class="box"><h4>🔒 Change password</h4>'+
-      '<div class="field"><label>Current password</label><input id="cp-old" type="password" placeholder="current"></div>'+
-      '<div class="row2"><div class="field"><label>New password</label><input id="cp-new" type="password" placeholder="min 6 chars"></div>'+
-      '<div class="field"><label>Confirm</label><input id="cp-new2" type="password" placeholder="repeat"></div></div>'+
+      '<div class="field"><label>Current password</label><div class="pwrap"><input id="cp-old" type="password" placeholder="current"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>'+
+      '<div class="row2"><div class="field"><label>New password</label><div class="pwrap"><input id="cp-new" type="password" placeholder="min 6 chars"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>'+
+      '<div class="field"><label>Confirm</label><div class="pwrap"><input id="cp-new2" type="password" placeholder="repeat"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div></div>'+
       '<button class="btn" id="cp-btn" onclick="doChangePw()" style="width:auto;padding:11px 22px">Update password</button>'+
     '</div>'
   );
