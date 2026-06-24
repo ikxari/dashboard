@@ -219,6 +219,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .switch input:checked+.slider{background:linear-gradient(135deg,var(--accent),var(--accent2))}
 .switch input:checked+.slider:before{transform:translateX(20px)}
 .rankwrap{display:flex;flex-direction:column}
+.segwrap{display:inline-flex;gap:4px;background:var(--inp);border:1px solid var(--brd);border-radius:30px;padding:4px;margin-bottom:18px}
+.seg{padding:8px 22px;border-radius:24px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit}
+.seg.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
 </style>
 </head>
 <body>
@@ -439,8 +442,8 @@ const TABS=[
   {id:'overview', label:'Overview',        rank:5},
   {id:'sales',    label:'Sales Analytics', rank:1},
   {id:'returns',  label:'Returns',         rank:1},
-  {id:'purchase_entry', label:'Purchase Entry', rank:4},
-  {id:'sales_entry',    label:'Sales Entry',    rank:4},
+  {id:'purchase_entry', label:'Unregister Purchase', rank:4},
+  {id:'sales_entry',    label:'Unregister Sales',    rank:4},
   {id:'inventory',label:'Inventory',       rank:1},
   {id:'ims',      label:'IMS Center',      rank:1, soon:true},
   {id:'purchase', label:'Purchase',        rank:1},
@@ -898,10 +901,9 @@ function apiS(p){
 let PCART=[], PFEED=[];
 function renderPurchaseEntry(){
   PCART=[];
-  setContent(pagehead('Purchase Entry','Add many items in one go, then push to stock','purchase_entry')+
+  setContent(pagehead('Unregister Purchase','Add many items in one go, then push to stock','purchase_entry')+
     '<div class="formwrap"><div class="box"><h4>➕ Add items to purchase</h4>'+
-      '<div class="row2"><div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
-      '<div class="field"><label>Type</label><select id="pe-type"><option>Cash</option><option>Customized</option><option>OLD Stock</option></select></div></div>'+
+      '<div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
       '<div class="field"><label>Item name</label><input id="pe-item" placeholder="e.g. HAND CLUTCH MRP2350"></div>'+
       '<div class="row2"><div class="field"><label>Purchase cost / item (₹)</label><input id="pe-cost" type="number" inputmode="decimal" oninput="peAmt()" placeholder="0"></div>'+
       '<div class="field"><label>Purchase qty</label><input id="pe-qty" type="number" inputmode="numeric" min="1" oninput="peAmt()" placeholder="0"></div></div>'+
@@ -919,7 +921,7 @@ function peAmt(){ const c=parseFloat(val('pe-cost'))||0,q=parseFloat(val('pe-qty
 function addPCart(){
   const item=val('pe-item'); if(!item)return toast('Item name required','err');
   const qty=parseFloat(val('pe-qty'))||0; if(qty<=0)return toast('Enter quantity','err');
-  PCART.push({distributor:val('pe-dist'),type:val('pe-type'),item:item,cost:parseFloat(val('pe-cost'))||0,qty:qty,sell:parseFloat(val('pe-sell'))||0});
+  PCART.push({distributor:val('pe-dist'),type:'Cash',item:item,cost:parseFloat(val('pe-cost'))||0,qty:qty,sell:parseFloat(val('pe-sell'))||0});
   ['pe-item','pe-cost','pe-qty','pe-amt','pe-sell'].forEach(x=>$(x).value=''); $('pe-item').focus();
   renderPCart();
 }
@@ -964,8 +966,7 @@ function loadPurchaseFeed(silent){
 function editPLine(id){
   const r=PFEED.find(x=>x.id===id); if(!r)return;
   fmForm('Edit purchase — '+id,
-    '<div class="row2"><div class="field"><label>Distributor</label><input id="ep-dist" value="'+esc(r.dist||'')+'"></div>'+
-    '<div class="field"><label>Type</label><select id="ep-type">'+['Cash','Customized','OLD Stock'].map(t=>'<option'+(r.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div></div>'+
+    '<div class="field"><label>Distributor</label><input id="ep-dist" value="'+esc(r.dist||'')+'"></div>'+
     '<div class="field"><label>Item</label><input id="ep-item" value="'+esc(r.item)+'"></div>'+
     '<div class="row2"><div class="field"><label>Cost</label><input id="ep-cost" type="number" value="'+r.cost+'"></div>'+
     '<div class="field"><label>Qty</label><input id="ep-qty" type="number" min="1" value="'+r.qty+'"></div></div>'+
@@ -974,7 +975,7 @@ function editPLine(id){
 }
 function savePLine(id){
   closeForm();
-  api({action:'editPurchase',token:tGet(),id:id,distributor:val('ep-dist'),type:val('ep-type'),item:val('ep-item'),cost:val('ep-cost'),qty:val('ep-qty'),sell:val('ep-sell')}).then(d=>{
+  api({action:'editPurchase',token:tGet(),id:id,distributor:val('ep-dist'),type:'Cash',item:val('ep-item'),cost:val('ep-cost'),qty:val('ep-qty'),sell:val('ep-sell')}).then(d=>{
     toast(d.ok?d.msg:d.error,d.ok?'ok':'err'); if(d.ok){loadPurchaseFeed();loadStockMini();}
   }).catch(e=>toast(e.message,'err'));
 }
@@ -995,31 +996,47 @@ function loadStockMini(silent){
 }
 
 /* ---------- Sales Entry (Sales Executive / Admin / Super Admin) ---------- */
-let SCART=[], IN_STOCK=[], SFEED=[];
+let SCART=[], IN_STOCK=[], SFEED=[], SALE_SEG='sale';
 function renderSalesEntry(){
-  SCART=[];
-  setContent(pagehead('Sales Entry','Search items, build a bill, sell — stock auto-deducts','sales_entry')+
-    '<div class="formwrap"><div class="box"><h4>🛒 Build sale</h4>'+
-      '<div class="field"><label>Search item (type to filter)</label><input id="se-search" placeholder="start typing item name…" oninput="renderSearch()"></div>'+
-      '<div id="se-results" style="max-height:220px;overflow:auto"></div>'+
-      '<div id="se-cart" style="margin-top:12px"></div>'+
-    '</div></div>'+
-    '<div class="box" id="se-billbox"><h4>🧾 Bill</h4><p class="desc">Build a sale and generate to see the bill here.</p></div>'+
-    '<div class="formwrap"><div class="box"><h4>↩️ Sale return</h4>'+
-      '<div class="row2"><div class="field"><label>Sale invoice no.</label><input id="sr-inv" placeholder="INV-0001"></div>'+
-      '<div class="field"><label>Item</label><input id="sr-item" placeholder="item name"></div></div>'+
-      '<div class="row2"><div class="field"><label>Return qty</label><input id="sr-qty" type="number" min="1" value="1"></div>'+
-      '<div class="field"><label>&nbsp;</label><button class="btn" id="sr-btn" onclick="submitReturn()">Process return</button></div></div>'+
-      '<p class="desc">Returns add stock back. You can return up to what was sold on that invoice.</p>'+
-    '</div></div>'+
-    '<div class="box"><h4>📋 Recent sales &amp; returns</h4><div id="se-feed">'+loadingBox()+'</div></div>');
+  SCART=[]; SALE_SEG='sale';
+  setContent(pagehead('Unregister Sales','Sell, return, and track daily sales','sales_entry')+
+    '<div class="segwrap"><button id="seg-sale" class="seg active" onclick="saleSeg(\'sale\')">Sale</button>'+
+      '<button id="seg-ret" class="seg" onclick="saleSeg(\'return\')">Sale Return</button></div>'+
+    '<div id="seg-sale-body">'+
+      '<div class="formwrap"><div class="box"><h4>🛒 Build sale</h4>'+
+        '<div class="field"><label>Search item (type to filter)</label><input id="se-search" placeholder="start typing item name…" oninput="renderSearch()"></div>'+
+        '<div id="se-results" style="max-height:220px;overflow:auto"></div>'+
+        '<div id="se-cart" style="margin-top:12px"></div>'+
+      '</div></div>'+
+      '<div class="box" id="se-billbox"><h4>🧾 Bill</h4><p class="desc">Build a sale and generate to see the bill here.</p></div>'+
+      '<div class="chartbox"><h4>📈 Daily sales <span id="se-growth" style="font-size:13px;font-weight:600;margin-left:8px"></span></h4><div id="se-chart"></div></div>'+
+      '<div class="box"><h4>📋 Recent sales</h4><div id="se-feed">'+loadingBox()+'</div></div>'+
+    '</div>'+
+    '<div id="seg-return-body" style="display:none">'+
+      '<div class="formwrap"><div class="box"><h4>↩️ Sale return</h4>'+
+        '<div class="row2"><div class="field"><label>Sale invoice no.</label><input id="sr-inv" placeholder="INV-0001"></div>'+
+        '<div class="field"><label>Item</label><input id="sr-item" placeholder="item name"></div></div>'+
+        '<div class="row2"><div class="field"><label>Return qty</label><input id="sr-qty" type="number" min="1" value="1"></div>'+
+        '<div class="field"><label>&nbsp;</label><button class="btn" id="sr-btn" onclick="submitReturn()">Process return</button></div></div>'+
+        '<p class="desc">Returns add stock back. From a recent sale, tap "Return" to auto-fill this.</p>'+
+      '</div></div>'+
+      '<div class="box"><h4>↩️ Recent returns</h4><div id="sr-feed">'+loadingBox()+'</div></div>'+
+    '</div>');
   loadInStock(); loadSalesFeed(); renderSCart();
   startAutoRefresh(()=>{ loadSalesFeed(true); loadInStock(true); });
+}
+function saleSeg(s){
+  SALE_SEG=s;
+  $('seg-sale').classList.toggle('active',s==='sale');
+  $('seg-ret').classList.toggle('active',s==='return');
+  $('seg-sale-body').style.display=s==='sale'?'':'none';
+  $('seg-return-body').style.display=s==='return'?'':'none';
 }
 function loadInStock(silent){
   (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{ if(!d||!d.ok)return; IN_STOCK=d.inStock||[]; renderSearch(); }).catch(()=>{});
 }
 function renderSearch(){
+  if(!$('se-search'))return;
   const q=(val('se-search')||'').toLowerCase();
   const list=IN_STOCK.filter(x=>x.item.toLowerCase().indexOf(q)>=0).slice(0,40);
   if(!q){ $('se-results').innerHTML='<p class="desc">Type above to find items.</p>'; return; }
@@ -1106,17 +1123,46 @@ function submitReturn(){
     toast(d.msg,'ok'); loadSalesFeed(); loadInStock();
   }).catch(e=>{btnBusy('sr-btn',false,'Process return');toast(e.message,'err');});
 }
-function returnFrom(inv,item){ $('sr-inv').value=inv; $('sr-item').value=item; $('sr-inv').scrollIntoView({behavior:'smooth'}); toast('Return form filled','ok'); }
+function returnFrom(inv,item){ saleSeg('return'); $('sr-inv').value=inv; $('sr-item').value=item; toast('Return form filled','ok'); }
 function loadSalesFeed(silent){
   (silent?apiS:api)({action:'salesFeed',token:tGet()}).then(d=>{
     if(!d||!d.ok)return; SFEED=d.feed||[];
-    $('se-feed').innerHTML=tbl(['Invoice','Date','Kind','Item','Qty','Price','Amount','By','—'],
-      SFEED.map(r=>[esc(r.invoice),esc(r.date),
-        '<span class="badge '+(r.kind==='Return'?'bg-Rejected':'bg-Active')+'">'+esc(r.kind)+'</span>',
-        esc(r.item),r.qty,inr(r.price),inr(r.amount),esc(r.by),
-        (r.kind==='Sale'? (r.editable?'<button class="icbtn" onclick="editSLine(\''+r.id+'\','+r.qty+','+r.price+')">Edit</button> ':'')+
-           '<button class="icbtn dng" onclick="returnFrom(\''+r.invoice+'\',\''+esc(r.item).replace(/'/g,"\\'")+'\')">Return</button>' : '—')]));
+    const sales=SFEED.filter(r=>r.kind!=='Return');
+    const rets =SFEED.filter(r=>r.kind==='Return');
+    if($('se-feed')) $('se-feed').innerHTML=tbl(['Invoice','Date','Item','Qty','Price','Amount','By','Actions'],
+      sales.map(r=>{
+        let act=[];
+        if(r.editable) act.push('<button class="icbtn" onclick="editSLine(\''+r.id+'\','+r.qty+','+r.price+')">Edit</button>');
+        if(r.deletable) act.push('<button class="icbtn dng" onclick="delSLine(\''+r.id+'\')">Delete</button>');
+        act.push('<button class="icbtn" onclick="returnFrom(\''+r.invoice+'\',\''+esc(r.item).replace(/'/g,"\\'")+'\')">Return</button>');
+        if(r.kind==='SaleHist' && !r.deletable) {}
+        return [esc(r.invoice),esc(r.date),esc(r.item),r.qty,inr(r.price),inr(r.amount),esc(r.by), act.join(' ')];
+      }));
+    if($('sr-feed')) $('sr-feed').innerHTML=tbl(['Return#','Date','From Invoice','Item','Qty','Amount','By'],
+      rets.map(r=>[esc(r.invoice),esc(r.date),esc(r.ref||'—'),esc(r.item),r.qty,inr(r.amount),esc(r.by)]));
+    drawDailySales(SFEED);
   }).catch(()=>{});
+}
+function drawDailySales(feed){
+  if(!$('se-chart'))return;
+  const day={};
+  feed.forEach(r=>{ const d=r.date; if(!d)return; const v=(r.kind==='Return'?-r.amount:r.amount); day[d]=(day[d]||0)+v; });
+  const dates=Object.keys(day).sort((a,b)=>new Date(a)-new Date(b));
+  if(!dates.length){ $('se-chart').innerHTML='<p class="desc">No sales yet.</p>'; return; }
+  const vals=dates.map(d=>Math.round(day[d]));
+  hcColumn('se-chart',dates,vals,'#7c5cff',true);
+  // growth: last day vs previous day
+  if(vals.length>=2){
+    const last=vals[vals.length-1], prev=vals[vals.length-2];
+    let txt='', col='';
+    if(prev>0){ const p=((last-prev)/prev*100); col=p>=0?'#7fe9c0':'#ff97a2'; txt=(p>=0?'▲ ':'▼ ')+Math.abs(p).toFixed(1)+'% vs previous day'; }
+    else { col='#7fe9c0'; txt='▲ new sales'; }
+    const g=$('se-growth'); if(g){ g.textContent=txt; g.style.color=col; }
+  }
+}
+function delSLine(id){
+  modalConfirm({icon:'🗑️',title:'Delete sale',message:'Delete this sale line? If it is a live sale, stock will be restored.',danger:true,confirmText:'Delete',
+    onConfirm:()=>api({action:'deleteSale',token:tGet(),id:id}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){loadSalesFeed();loadInStock();}}).catch(e=>toast(e.message,'err'))});
 }
 function editSLine(id,qty,price){
   fmForm('Edit sale (within 6h) — '+id,
