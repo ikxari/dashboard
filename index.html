@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Ikxari - Beyond Fashion</title>
+<title>IKXARI ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -255,10 +255,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
         <div class="row2">
           <div class="field"><label>Department</label><input id="su-dept" placeholder="e.g. Sales"></div>
-          <div class="field"><label>Employee ID</label><input id="su-emp" placeholder="e.g. SP-12"></div>
+          <div class="field"><label>Employee ID</label><input id="su-emp" placeholder="auto if blank"></div>
         </div>
         <div class="field"><label>Requested role</label>
-          <select id="su-role"><option>Employee</option><option>Manager</option><option>Admin</option></select>
+          <select id="su-role"><option>Sales Executive</option><option>Accountant</option><option>Manager</option></select>
         </div>
         <div class="row2">
           <div class="field"><label>Password</label><div class="pwrap"><input id="su-pass" type="password" placeholder="min 6 chars"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
@@ -334,7 +334,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbzKVTp09_-XELHsGnICN0-vX-mHxQRzKYnrl4U00n5l7Qj2WNWxLw4RcbAxSisKXdhN/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycby0Kc1qi7N_Jtf1WlyeT__9HbeX0OTrEWbRb2tFkAesSGDwxkEXR7WTlNeAcVZDTkr6/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -435,10 +435,12 @@ function doReset(){
 /* ===================== APP ===================== */
 let ME=null;
 const TABS=[
-  {id:'overview', label:'Overview',        rank:4},
+  {id:'overview', label:'Overview',        rank:5},
   {id:'sales',    label:'Sales Analytics', rank:1},
   {id:'returns',  label:'Returns',         rank:1},
-  {id:'inventory',label:'Inventory',       rank:1, soon:true},
+  {id:'purchase_entry', label:'Purchase Entry', rank:4},
+  {id:'sales_entry',    label:'Sales Entry',    rank:4},
+  {id:'inventory',label:'Inventory',       rank:1},
   {id:'ims',      label:'IMS Center',      rank:1, soon:true},
   {id:'purchase', label:'Purchase',        rank:1},
   {id:'crm',      label:'Customer CRM',    rank:1},
@@ -446,12 +448,18 @@ const TABS=[
   {id:'gst',      label:'GST',             rank:2},
   {id:'expense',  label:'Expense',         rank:2},
   {id:'reports',  label:'Reports',         rank:2},
-  {id:'users',    label:'User Management', rank:4},
-  {id:'activity', label:'Login Activity',  rank:4},
-  {id:'audit',    label:'Audit Log',       rank:4},
-  {id:'system',   label:'System',          rank:4},
+  {id:'users',    label:'User Management', rank:5},
+  {id:'activity', label:'Login Activity',  rank:5},
+  {id:'audit',    label:'Audit Log',       rank:5},
+  {id:'system',   label:'System',          rank:5},
   {id:'settings', label:'Settings',        rank:1}
 ];
+/* role-based visibility: Accountant→only Purchase Entry, Sales Exec→only Sales Entry */
+function canSee(id){
+  if(ME.role==='Accountant')      return id==='purchase_entry'||id==='settings';
+  if(ME.role==='Sales Executive') return id==='sales_entry'||id==='settings';
+  const t=TABS.find(x=>x.id===id); return t? ME.rank>=t.rank : false;
+}
 
 let CONFIG={maintenance:{},notice:{on:false}};
 function enterApp(user){
@@ -462,7 +470,7 @@ function enterApp(user){
   $('u-role').textContent=user.role;
   $('u-av').textContent=(user.fullName||'U').charAt(0).toUpperCase();
   buildNav();
-  loadConfig(()=>{ const first=TABS.find(t=>ME.rank>=t.rank); openTab(first?first.id:'settings'); });
+  loadConfig(()=>{ const first=TABS.find(t=>canSee(t.id)); openTab(first?first.id:'settings'); });
 }
 function loadConfig(cb){
   api({action:'getConfig',token:tGet()}).then(d=>{
@@ -478,18 +486,17 @@ function paintNotice(){
 }
 function buildNav(){
   const nav=$('nav');nav.innerHTML='';
-  TABS.filter(t=>ME.rank>=t.rank).forEach(t=>{
+  TABS.filter(t=>canSee(t.id)).forEach(t=>{
     const b=document.createElement('button');b.textContent=t.label;b.id='tab-'+t.id;
     b.onclick=()=>openTab(t.id);nav.appendChild(b);
   });
 }
 let CUR='';
 function openTab(id){
-  CUR=id;
+  CUR=id; stopAutoRefresh();
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
   const tb=$('tab-'+id);if(tb)tb.classList.add('active');
   const tab=TABS.find(t=>t.id===id);
-  // maintenance gate (super admin bypasses to still manage)
   if(CONFIG.maintenance&&CONFIG.maintenance[id]&&ME.rank<4){
     return setContent('<div class="maint"><div class="ic">🛠️</div><h3>'+esc(tab?tab.label:'Page')+' — Under Maintenance</h3><p>'+esc(CONFIG.maintenance[id])+'</p></div>');
   }
@@ -497,6 +504,9 @@ function openTab(id){
   if(id==='overview')return renderOverview();
   if(id==='sales')return renderSales();
   if(id==='returns')return renderReturns();
+  if(id==='purchase_entry')return renderPurchaseEntry();
+  if(id==='sales_entry')return renderSalesEntry();
+  if(id==='inventory')return renderInventory();
   if(id==='purchase')return renderPurchase();
   if(id==='crm')return renderCRM();
   if(id==='vendor')return renderVendor();
@@ -509,6 +519,9 @@ function openTab(id){
   if(id==='system')return renderSystem();
   if(id==='settings')return renderSettings();
 }
+let _autoTimer=null;
+function stopAutoRefresh(){ if(_autoTimer){clearInterval(_autoTimer);_autoTimer=null;} }
+function startAutoRefresh(fn){ stopAutoRefresh(); _autoTimer=setInterval(fn,60000); }
 function setContent(html){$('content').innerHTML='<div class="page show">'+html+'</div>';}
 
 /* ---------- date filter ---------- */
@@ -874,8 +887,145 @@ function renderSoon(label){
     '<p>This module is part of an upcoming build phase. The data mapping is ready — the dashboard will plug in here next.</p></div>');
 }
 
+/* ---------- silent fetch (for 60s auto-refresh, no loader flash) ---------- */
+function apiS(p){
+  if(API.indexOf('PASTE_')===0)return Promise.reject(new Error('Backend URL not set.'));
+  return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(r=>r.json());
+}
+
+/* ---------- Purchase Entry (Accountant / Admin / Super Admin) ---------- */
+function renderPurchaseEntry(){
+  setContent(pagehead('Purchase Entry','Add stock — purchases never overwrite, only add','purchase_entry')+
+    '<div class="grid2"><div class="box"><h4>➕ New purchase</h4>'+
+      '<div class="row2"><div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
+      '<div class="field"><label>Type</label><select id="pe-type"><option>Cash</option><option>Customized</option><option>OLD Stock</option></select></div></div>'+
+      '<div class="field"><label>Item name</label><input id="pe-item" placeholder="e.g. HAND CLUTCH MRP2350"></div>'+
+      '<div class="row2"><div class="field"><label>Purchase cost / item (₹)</label><input id="pe-cost" type="number" inputmode="decimal" oninput="peAmt()" placeholder="0"></div>'+
+      '<div class="field"><label>Purchase qty</label><input id="pe-qty" type="number" inputmode="numeric" oninput="peAmt()" placeholder="0"></div></div>'+
+      '<div class="row2"><div class="field"><label>Amount (auto)</label><input id="pe-amt" readonly placeholder="₹0"></div>'+
+      '<div class="field"><label>Selling price / item (₹)</label><input id="pe-sell" type="number" inputmode="decimal" placeholder="0"></div></div>'+
+      '<button class="btn" id="pe-btn" onclick="submitPurchase()">Add to stock</button>'+
+    '</div>'+
+    '<div class="box"><h4>📦 Quick stock snapshot</h4><div id="pe-stockmini">'+loadingBox()+'</div></div></div>'+
+    '<div class="box"><h4>🧾 Recent purchases</h4><div id="pe-feed">'+loadingBox()+'</div></div>');
+  loadPurchaseFeed(); loadStockMini();
+  startAutoRefresh(()=>{ loadPurchaseFeed(true); loadStockMini(true); });
+}
+function peAmt(){ const c=parseFloat(val('pe-cost'))||0,q=parseFloat(val('pe-qty'))||0; $('pe-amt').value=inr(c*q); }
+function submitPurchase(){
+  const item=val('pe-item'),cost=val('pe-cost'),qty=val('pe-qty');
+  if(!item)return toast('Item name required','err');
+  if(!(parseFloat(qty)>0))return toast('Enter quantity','err');
+  btnBusy('pe-btn',true,'Saving');
+  api({action:'addPurchase',token:tGet(),distributor:val('pe-dist'),type:val('pe-type'),item:item,
+       cost:cost,qty:qty,sellPrice:val('pe-sell')}).then(d=>{
+    btnBusy('pe-btn',false,'Add to stock');
+    if(!d.ok)return modalAlert(d.error,'Failed','⚠️');
+    ['pe-item','pe-cost','pe-qty','pe-amt','pe-sell'].forEach(x=>$(x).value='');
+    toast(d.msg,'ok'); loadPurchaseFeed(); loadStockMini();
+  }).catch(e=>{btnBusy('pe-btn',false,'Add to stock');toast(e.message,'err');});
+}
+function loadPurchaseFeed(silent){
+  (silent?apiS:api)({action:'purchaseFeed',token:tGet()}).then(d=>{
+    if(!d||!d.ok)return; 
+    $('pe-feed').innerHTML=tbl(['ID','Date','Distributor','Type','Item','Cost','Qty','Amount','Sell','By'],
+      (d.feed||[]).map(r=>[esc(r.id),esc(r.date),esc(r.dist),esc(r.type),esc(r.item),inr(r.cost),r.qty,inr(r.amount),inr(r.sell),esc(r.by)]));
+  }).catch(()=>{});
+}
+function loadStockMini(silent){
+  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
+    if(!d||!d.ok)return; const k=d.kpis;
+    $('pe-stockmini').innerHTML='<div class="cards" style="grid-template-columns:1fr 1fr">'+
+      statCard('Items',k.items)+statCard('Units in stock',k.units)+
+      statCard('Stock Value',inrS(k.stockValue))+statCard('Low stock',k.low)+'</div>';
+  }).catch(()=>{});
+}
+
+/* ---------- Sales Entry (Sales Executive / Admin / Super Admin) ---------- */
+let IN_STOCK=[];
+function renderSalesEntry(){
+  setContent(pagehead('Sales Entry','Sell in-stock items — stock auto-deducts','sales_entry')+
+    '<div class="grid2"><div class="box"><h4>🧾 New sale</h4>'+
+      '<div class="field"><label>Invoice no.</label><input id="se-inv" value="auto-generated" readonly></div>'+
+      '<div class="field"><label>Item (in stock)</label><select id="se-item" onchange="seFill()"><option value="">Loading…</option></select></div>'+
+      '<div class="row2"><div class="field"><label>Qty</label><input id="se-qty" type="number" inputmode="numeric" value="1" oninput="seFill()"></div>'+
+      '<div class="field"><label>Selling price (auto)</label><input id="se-price" type="number" placeholder="0"></div></div>'+
+      '<div class="field"><label>Amount</label><input id="se-amt" readonly placeholder="₹0"></div>'+
+      '<button class="btn" id="se-btn" onclick="submitSale()">Generate bill</button>'+
+    '</div>'+
+    '<div class="box" id="se-billbox"><h4>🧾 Bill</h4><p class="desc">Generate a sale to see the bill here.</p></div></div>'+
+    '<div class="box"><h4>📋 Recent sales</h4><div id="se-feed">'+loadingBox()+'</div></div>');
+  loadInStock(); loadSalesFeed();
+  startAutoRefresh(()=>{ loadSalesFeed(true); loadInStock(true); });
+}
+function loadInStock(silent){
+  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
+    if(!d||!d.ok)return; IN_STOCK=d.inStock||[];
+    const sel=$('se-item'); if(!sel)return; const cur=sel.value;
+    sel.innerHTML='<option value="">Select item…</option>'+IN_STOCK.map(x=>'<option value="'+esc(x.item)+'" data-p="'+x.sell+'" data-s="'+x.current+'">'+esc(x.item)+'  ('+x.current+' left)</option>').join('');
+    if(cur)sel.value=cur; seFill();
+  }).catch(()=>{});
+}
+function seFill(){
+  const sel=$('se-item'); if(!sel)return; const o=sel.selectedOptions[0];
+  const p=o?parseFloat(o.dataset.p||0):0; if(p&&!$('se-price').value)$('se-price').value=p;
+  const price=parseFloat(val('se-price'))||0, qty=parseFloat(val('se-qty'))||0;
+  $('se-amt').value=inr(price*qty);
+}
+function submitSale(){
+  const item=val('se-item'),qty=val('se-qty');
+  if(!item)return toast('Select an item','err');
+  if(!(parseFloat(qty)>0))return toast('Enter quantity','err');
+  btnBusy('se-btn',true,'Generating');
+  api({action:'addSale',token:tGet(),item:item,qty:qty,sellPrice:val('se-price')}).then(d=>{
+    btnBusy('se-btn',false,'Generate bill');
+    if(!d.ok)return modalAlert(d.error,'Sale failed','⚠️');
+    showBill(d.bill); $('se-price').value='';$('se-qty').value='1';
+    toast('Sale recorded','ok'); loadInStock(); loadSalesFeed();
+  }).catch(e=>{btnBusy('se-btn',false,'Generate bill');toast(e.message,'err');});
+}
+function showBill(b){
+  $('se-billbox').innerHTML='<div style="text-align:center;border-bottom:1px dashed var(--brd);padding-bottom:14px;margin-bottom:14px">'+
+      '<div style="font-size:22px;font-weight:800;letter-spacing:1px">Ikxari</div>'+
+      '<div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Your X Factor in Luxury</div></div>'+
+    '<table style="width:100%;font-size:14px;line-height:2.1">'+
+      '<tr><td style="color:var(--muted)">Invoice</td><td style="text-align:right"><b>'+esc(b.invoice)+'</b></td></tr>'+
+      '<tr><td style="color:var(--muted)">Date</td><td style="text-align:right">'+esc(b.date)+'</td></tr>'+
+      '<tr><td style="color:var(--muted)">Item</td><td style="text-align:right">'+esc(b.item)+'</td></tr>'+
+      '<tr><td style="color:var(--muted)">Qty × Price</td><td style="text-align:right">'+b.qty+' × '+inr(b.price)+'</td></tr>'+
+      '<tr><td style="color:var(--muted)">Sold by</td><td style="text-align:right">'+esc(b.by)+'</td></tr></table>'+
+    '<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--brd);margin-top:10px;padding-top:12px;font-size:18px;font-weight:700"><span>Total</span><span>'+inr(b.amount)+'</span></div>'+
+    '<p style="text-align:center;color:var(--muted);font-size:12px;margin-top:14px">Stock left for this item: '+b.remaining+'</p>';
+}
+function loadSalesFeed(silent){
+  (silent?apiS:api)({action:'salesFeed',token:tGet()}).then(d=>{
+    if(!d||!d.ok)return;
+    $('se-feed').innerHTML=tbl(['Invoice','Date','Item','Qty','Price','Amount','By'],
+      (d.feed||[]).map(r=>[esc(r.invoice),esc(r.date),esc(r.item),r.qty,inr(r.price),inr(r.amount),esc(r.by)]));
+  }).catch(()=>{});
+}
+
+/* ---------- Inventory (live closing stock) ---------- */
+function renderInventory(){
+  setContent(pagehead('Inventory','Live closing stock = purchased − sold (auto, every 60s)','inventory')+'<div id="iv">'+loadingBox()+'</div>');
+  loadInventory(); startAutoRefresh(()=>loadInventory(true));
+}
+function loadInventory(silent){
+  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
+    if(!d||!d.ok)return(silent?null:($('iv').innerHTML=errBox(d))); const k=d.kpis;
+    $('iv').innerHTML='<div class="cards">'+
+      statCard('Items',k.items)+statCard('Units in stock',k.units)+
+      statCard('Stock Value',inrS(k.stockValue))+statCard('Low stock',k.low,'≤2 left')+
+      statCard('Purchased today',inrS(k.purToday))+statCard('Sold today',inrS(k.salToday))+
+    '</div>'+
+    '<div class="box"><h4>📦 Current stock</h4>'+tbl(['Item','Type','Purchased','Sold','Current','Sell','Value'],
+      (d.inventory||[]).map(m=>[esc(m.item),esc(m.type||'—'),m.purchased,m.sold,
+        '<b style="color:'+(m.current<=0?'#ff97a2':(m.current<=2?'#ffce85':'#7fe9c0'))+'">'+m.current+'</b>',inr(m.sell),inr(m.value)]))+'</div>';
+  }).catch(e=>{ if(!silent)$('iv').innerHTML=connBox(e); });
+}
+
 /* ---------- User Management ---------- */
-let USERS=[],ROLES_AVAIL=['Employee','Manager','Admin'];
+let USERS=[],ROLES_AVAIL=['Sales Executive','Accountant','Manager'];
 function renderUsers(){
   setContent('<div id="um"></div>');
   loadUsers();
@@ -888,8 +1038,8 @@ function loadUsers(){
   }).catch(e=>toast(e.message,'err'));
 }
 function assignable(){
-  if(ME.role==='Super Admin')return ['Employee','Manager','Admin'];
-  if(ME.role==='Admin')return ['Employee','Manager'];
+  if(ME.role==='Super Admin')return ['Sales Executive','Accountant','Manager','Admin'];
+  if(ME.role==='Admin')return ['Sales Executive','Accountant','Manager'];
   return [];
 }
 function paintUsers(filter){
@@ -1103,6 +1253,7 @@ function doChangePw(){
 /* ---------- session / logout ---------- */
 function guard(d){ if(d&&d.error&&/session/i.test(d.error)){doLogout();} toast(d.error||'Error','err'); }
 function doLogout(){
+  stopAutoRefresh();
   const t=tGet();tClr();ME=null;
   $('appView').style.display='none';$('authView').style.display='flex';show('login');
   $('li-pass').value='';
