@@ -101,8 +101,12 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
 .stat{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:18px}
-.stat .n{font-size:30px;font-weight:700}
+.stat .n{font-size:26px;font-weight:700;overflow-wrap:anywhere;line-height:1.15}
 .stat .l{font-size:12.5px;color:var(--muted);margin-top:3px}
+.formwrap{max-width:560px;width:100%;margin:0 auto}
+.pcard{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:16px 18px;min-width:0}
+.pcard .pv{font-size:18px;font-weight:600;overflow-wrap:anywhere;line-height:1.3}
+.pcard .pl{font-size:12px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.5px}
 .stat .bar{height:3px;border-radius:3px;margin-top:12px;background:linear-gradient(135deg,var(--accent),var(--accent2))}
 .box{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:20px;margin-bottom:18px}
 .box h4{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -253,10 +257,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div class="field"><label>Email</label><input id="su-email" type="email" placeholder="you@company.com"></div>
           <div class="field"><label>Mobile</label><input id="su-mobile" placeholder="10-digit"></div>
         </div>
-        <div class="row2">
-          <div class="field"><label>Department</label><input id="su-dept" placeholder="e.g. Sales"></div>
-          <div class="field"><label>Employee ID</label><input id="su-emp" placeholder="auto if blank"></div>
-        </div>
+        <div class="field"><label>Department</label><input id="su-dept" placeholder="e.g. Sales"></div>
         <div class="field"><label>Requested role</label>
           <select id="su-role"><option>Sales Executive</option><option>Accountant</option><option>Manager</option></select>
         </div>
@@ -334,7 +335,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycby0Kc1qi7N_Jtf1WlyeT__9HbeX0OTrEWbRb2tFkAesSGDwxkEXR7WTlNeAcVZDTkr6/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbzwf_IOiD-bug67To2bjI_mKh0GFBbgbqYqrEYy1_jUiEEPITiZSL2CNJvNMVT2fGlV/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -392,7 +393,7 @@ function doSignup(){
   if(p!==p2)return toast('Passwords do not match','err');
   btnBusy('su-btn',true,'Creating');
   api({action:'signup',fullName:name,email,mobile:val('su-mobile'),department:val('su-dept'),
-       employeeId:val('su-emp'),requestedRole:val('su-role'),password:p}).then(d=>{
+       requestedRole:val('su-role'),password:p}).then(d=>{
     btnBusy('su-btn',false,'Create Account');
     if(!d.ok)return modalAlert(d.error,'Signup failed','⚠️');
     pendingEmail=email;$('otp-email').textContent=email;show('otp');toast('Verification code sent','ok');
@@ -448,16 +449,16 @@ const TABS=[
   {id:'gst',      label:'GST',             rank:2},
   {id:'expense',  label:'Expense',         rank:2},
   {id:'reports',  label:'Reports',         rank:2},
-  {id:'users',    label:'User Management', rank:5},
+  {id:'users',    label:'User Management', rank:4},
   {id:'activity', label:'Login Activity',  rank:5},
   {id:'audit',    label:'Audit Log',       rank:5},
   {id:'system',   label:'System',          rank:5},
   {id:'settings', label:'Settings',        rank:1}
 ];
-/* role-based visibility: Accountant→only Purchase Entry, Sales Exec→only Sales Entry */
+/* role-based visibility: Accountant→Purchase Entry + Inventory, Sales Exec→Sales Entry */
 function canSee(id){
-  if(ME.role==='Accountant')      return id==='purchase_entry'||id==='settings';
-  if(ME.role==='Sales Executive') return id==='sales_entry'||id==='settings';
+  if(ME.role==='Accountant')      return ['purchase_entry','inventory','settings'].indexOf(id)>=0;
+  if(ME.role==='Sales Executive') return ['sales_entry','settings'].indexOf(id)>=0;
   const t=TABS.find(x=>x.id===id); return t? ME.rank>=t.rank : false;
 }
 
@@ -894,115 +895,240 @@ function apiS(p){
 }
 
 /* ---------- Purchase Entry (Accountant / Admin / Super Admin) ---------- */
+let PCART=[], PFEED=[];
 function renderPurchaseEntry(){
-  setContent(pagehead('Purchase Entry','Add stock — purchases never overwrite, only add','purchase_entry')+
-    '<div class="grid2"><div class="box"><h4>➕ New purchase</h4>'+
+  PCART=[];
+  setContent(pagehead('Purchase Entry','Add many items in one go, then push to stock','purchase_entry')+
+    '<div class="formwrap"><div class="box"><h4>➕ Add items to purchase</h4>'+
       '<div class="row2"><div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
       '<div class="field"><label>Type</label><select id="pe-type"><option>Cash</option><option>Customized</option><option>OLD Stock</option></select></div></div>'+
       '<div class="field"><label>Item name</label><input id="pe-item" placeholder="e.g. HAND CLUTCH MRP2350"></div>'+
       '<div class="row2"><div class="field"><label>Purchase cost / item (₹)</label><input id="pe-cost" type="number" inputmode="decimal" oninput="peAmt()" placeholder="0"></div>'+
-      '<div class="field"><label>Purchase qty</label><input id="pe-qty" type="number" inputmode="numeric" oninput="peAmt()" placeholder="0"></div></div>'+
+      '<div class="field"><label>Purchase qty</label><input id="pe-qty" type="number" inputmode="numeric" min="1" oninput="peAmt()" placeholder="0"></div></div>'+
       '<div class="row2"><div class="field"><label>Amount (auto)</label><input id="pe-amt" readonly placeholder="₹0"></div>'+
       '<div class="field"><label>Selling price / item (₹)</label><input id="pe-sell" type="number" inputmode="decimal" placeholder="0"></div></div>'+
-      '<button class="btn" id="pe-btn" onclick="submitPurchase()">Add to stock</button>'+
-    '</div>'+
-    '<div class="box"><h4>📦 Quick stock snapshot</h4><div id="pe-stockmini">'+loadingBox()+'</div></div></div>'+
-    '<div class="box"><h4>🧾 Recent purchases</h4><div id="pe-feed">'+loadingBox()+'</div></div>');
-  loadPurchaseFeed(); loadStockMini();
+      '<button class="btn ghost" onclick="addPCart()">+ Add item to list</button>'+
+      '<div id="pe-cart" style="margin-top:14px"></div>'+
+    '</div></div>'+
+    '<div class="box"><h4>📦 Quick stock snapshot</h4><div id="pe-stockmini">'+loadingBox()+'</div></div>'+
+    '<div class="box"><h4>🧾 Recent purchases (by invoice)</h4><div id="pe-feed">'+loadingBox()+'</div></div>');
+  renderPCart(); loadPurchaseFeed(); loadStockMini();
   startAutoRefresh(()=>{ loadPurchaseFeed(true); loadStockMini(true); });
 }
 function peAmt(){ const c=parseFloat(val('pe-cost'))||0,q=parseFloat(val('pe-qty'))||0; $('pe-amt').value=inr(c*q); }
-function submitPurchase(){
-  const item=val('pe-item'),cost=val('pe-cost'),qty=val('pe-qty');
-  if(!item)return toast('Item name required','err');
-  if(!(parseFloat(qty)>0))return toast('Enter quantity','err');
-  btnBusy('pe-btn',true,'Saving');
-  api({action:'addPurchase',token:tGet(),distributor:val('pe-dist'),type:val('pe-type'),item:item,
-       cost:cost,qty:qty,sellPrice:val('pe-sell')}).then(d=>{
-    btnBusy('pe-btn',false,'Add to stock');
+function addPCart(){
+  const item=val('pe-item'); if(!item)return toast('Item name required','err');
+  const qty=parseFloat(val('pe-qty'))||0; if(qty<=0)return toast('Enter quantity','err');
+  PCART.push({distributor:val('pe-dist'),type:val('pe-type'),item:item,cost:parseFloat(val('pe-cost'))||0,qty:qty,sell:parseFloat(val('pe-sell'))||0});
+  ['pe-item','pe-cost','pe-qty','pe-amt','pe-sell'].forEach(x=>$(x).value=''); $('pe-item').focus();
+  renderPCart();
+}
+function rmPCart(i){ PCART.splice(i,1); renderPCart(); }
+function renderPCart(){
+  if(!PCART.length){ $('pe-cart').innerHTML='<p class="desc">No items added yet. Add items above, then push to stock.</p>'; return; }
+  let h=tbl(['#','Item','Type','Cost','Qty','Amount','Sell','—'],
+    PCART.map((p,i)=>[(i+1),esc(p.item),esc(p.type),inr(p.cost),p.qty,inr(p.cost*p.qty),inr(p.sell),
+      '<button class="icbtn dng" onclick="rmPCart('+i+')">Remove</button>']));
+  h+='<button class="btn" id="pe-submit" onclick="submitPurchaseBatch()" style="margin-top:12px">Add to stock ('+PCART.length+' item'+(PCART.length>1?'s':'')+')</button>';
+  $('pe-cart').innerHTML=h;
+}
+function submitPurchaseBatch(){
+  if(!PCART.length)return; btnBusy('pe-submit',true,'Saving');
+  api({action:'addPurchaseBatch',token:tGet(),items:PCART}).then(d=>{
+    btnBusy('pe-submit',false,'Add to stock');
     if(!d.ok)return modalAlert(d.error,'Failed','⚠️');
-    ['pe-item','pe-cost','pe-qty','pe-amt','pe-sell'].forEach(x=>$(x).value='');
-    toast(d.msg,'ok'); loadPurchaseFeed(); loadStockMini();
-  }).catch(e=>{btnBusy('pe-btn',false,'Add to stock');toast(e.message,'err');});
+    PCART=[]; renderPCart(); toast(d.msg,'ok'); loadPurchaseFeed(); loadStockMini();
+  }).catch(e=>{btnBusy('pe-submit',false,'Add to stock');toast(e.message,'err');});
 }
 function loadPurchaseFeed(silent){
   (silent?apiS:api)({action:'purchaseFeed',token:tGet()}).then(d=>{
-    if(!d||!d.ok)return; 
-    $('pe-feed').innerHTML=tbl(['ID','Date','Distributor','Type','Item','Cost','Qty','Amount','Sell','By'],
-      (d.feed||[]).map(r=>[esc(r.id),esc(r.date),esc(r.dist),esc(r.type),esc(r.item),inr(r.cost),r.qty,inr(r.amount),inr(r.sell),esc(r.by)]));
+    if(!d||!d.ok)return; PFEED=d.feed||[];
+    // group by invoice
+    const groups={}; PFEED.forEach(r=>{(groups[r.invoice]=groups[r.invoice]||[]).push(r);});
+    let h='';
+    Object.keys(groups).forEach(inv=>{
+      const rows=groups[inv]; const tot=rows.reduce((s,r)=>s+r.amount,0);
+      h+='<div style="border:1px solid var(--brd);border-radius:12px;margin-bottom:12px;overflow:hidden">'+
+         '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,.03)">'+
+           '<div><b>'+esc(inv)+'</b> <span style="color:var(--muted);font-size:12px">· '+esc(rows[0].date)+' · '+esc(rows[0].dist||'—')+' · '+inr(tot)+'</span></div>'+
+           (inv!=='OPENING'?'<button class="icbtn dng" onclick="delPInvoice(\''+inv+'\')">Delete invoice</button>':'')+
+         '</div><div style="padding:4px 8px">'+
+         tbl(['Item','Type','Cost','Qty','Amount','Sell','By','—'],
+           rows.map(r=>[esc(r.item),esc(r.type),inr(r.cost),r.qty,inr(r.amount),inr(r.sell),esc(r.by),
+             '<button class="icbtn" onclick="editPLine(\''+r.id+'\')">Edit</button> <button class="icbtn dng" onclick="delPLine(\''+r.id+'\')">Del</button>']))+
+         '</div></div>';
+    });
+    $('pe-feed').innerHTML=h||noData('No purchases yet.');
   }).catch(()=>{});
+}
+function editPLine(id){
+  const r=PFEED.find(x=>x.id===id); if(!r)return;
+  fmForm('Edit purchase — '+id,
+    '<div class="row2"><div class="field"><label>Distributor</label><input id="ep-dist" value="'+esc(r.dist||'')+'"></div>'+
+    '<div class="field"><label>Type</label><select id="ep-type">'+['Cash','Customized','OLD Stock'].map(t=>'<option'+(r.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div></div>'+
+    '<div class="field"><label>Item</label><input id="ep-item" value="'+esc(r.item)+'"></div>'+
+    '<div class="row2"><div class="field"><label>Cost</label><input id="ep-cost" type="number" value="'+r.cost+'"></div>'+
+    '<div class="field"><label>Qty</label><input id="ep-qty" type="number" min="1" value="'+r.qty+'"></div></div>'+
+    '<div class="field"><label>Selling price</label><input id="ep-sell" type="number" value="'+r.sell+'"></div>'+
+    '<button class="btn" onclick="savePLine(\''+id+'\')">Save changes</button>');
+}
+function savePLine(id){
+  closeForm();
+  api({action:'editPurchase',token:tGet(),id:id,distributor:val('ep-dist'),type:val('ep-type'),item:val('ep-item'),cost:val('ep-cost'),qty:val('ep-qty'),sell:val('ep-sell')}).then(d=>{
+    toast(d.ok?d.msg:d.error,d.ok?'ok':'err'); if(d.ok){loadPurchaseFeed();loadStockMini();}
+  }).catch(e=>toast(e.message,'err'));
+}
+function delPLine(id){
+  modalConfirm({icon:'🗑️',title:'Delete item',message:'Remove this purchased line? Stock will recompute.',danger:true,confirmText:'Delete',
+    onConfirm:()=>api({action:'deletePurchase',token:tGet(),id:id}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){loadPurchaseFeed();loadStockMini();}}).catch(e=>toast(e.message,'err'))});
+}
+function delPInvoice(inv){
+  modalConfirm({icon:'🗑️',title:'Delete invoice',message:'Delete ALL items in '+inv+'? Stock will recompute.',danger:true,confirmText:'Delete invoice',
+    onConfirm:()=>api({action:'deletePurchaseInvoice',token:tGet(),invoice:inv}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){loadPurchaseFeed();loadStockMini();}}).catch(e=>toast(e.message,'err'))});
 }
 function loadStockMini(silent){
   (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
     if(!d||!d.ok)return; const k=d.kpis;
-    $('pe-stockmini').innerHTML='<div class="cards" style="grid-template-columns:1fr 1fr">'+
-      statCard('Items',k.items)+statCard('Units in stock',k.units)+
-      statCard('Stock Value',inrS(k.stockValue))+statCard('Low stock',k.low)+'</div>';
+    $('pe-stockmini').innerHTML='<div class="cards" style="grid-template-columns:repeat(4,1fr)">'+
+      statCard('Items',k.items)+statCard('Units',k.units)+statCard('Stock Value',inrS(k.stockValue))+statCard('Low stock',k.low)+'</div>';
   }).catch(()=>{});
 }
 
 /* ---------- Sales Entry (Sales Executive / Admin / Super Admin) ---------- */
-let IN_STOCK=[];
+let SCART=[], IN_STOCK=[], SFEED=[];
 function renderSalesEntry(){
-  setContent(pagehead('Sales Entry','Sell in-stock items — stock auto-deducts','sales_entry')+
-    '<div class="grid2"><div class="box"><h4>🧾 New sale</h4>'+
-      '<div class="field"><label>Invoice no.</label><input id="se-inv" value="auto-generated" readonly></div>'+
-      '<div class="field"><label>Item (in stock)</label><select id="se-item" onchange="seFill()"><option value="">Loading…</option></select></div>'+
-      '<div class="row2"><div class="field"><label>Qty</label><input id="se-qty" type="number" inputmode="numeric" value="1" oninput="seFill()"></div>'+
-      '<div class="field"><label>Selling price (auto)</label><input id="se-price" type="number" placeholder="0"></div></div>'+
-      '<div class="field"><label>Amount</label><input id="se-amt" readonly placeholder="₹0"></div>'+
-      '<button class="btn" id="se-btn" onclick="submitSale()">Generate bill</button>'+
-    '</div>'+
-    '<div class="box" id="se-billbox"><h4>🧾 Bill</h4><p class="desc">Generate a sale to see the bill here.</p></div></div>'+
-    '<div class="box"><h4>📋 Recent sales</h4><div id="se-feed">'+loadingBox()+'</div></div>');
-  loadInStock(); loadSalesFeed();
+  SCART=[];
+  setContent(pagehead('Sales Entry','Search items, build a bill, sell — stock auto-deducts','sales_entry')+
+    '<div class="formwrap"><div class="box"><h4>🛒 Build sale</h4>'+
+      '<div class="field"><label>Search item (type to filter)</label><input id="se-search" placeholder="start typing item name…" oninput="renderSearch()"></div>'+
+      '<div id="se-results" style="max-height:220px;overflow:auto"></div>'+
+      '<div id="se-cart" style="margin-top:12px"></div>'+
+    '</div></div>'+
+    '<div class="box" id="se-billbox"><h4>🧾 Bill</h4><p class="desc">Build a sale and generate to see the bill here.</p></div>'+
+    '<div class="formwrap"><div class="box"><h4>↩️ Sale return</h4>'+
+      '<div class="row2"><div class="field"><label>Sale invoice no.</label><input id="sr-inv" placeholder="INV-0001"></div>'+
+      '<div class="field"><label>Item</label><input id="sr-item" placeholder="item name"></div></div>'+
+      '<div class="row2"><div class="field"><label>Return qty</label><input id="sr-qty" type="number" min="1" value="1"></div>'+
+      '<div class="field"><label>&nbsp;</label><button class="btn" id="sr-btn" onclick="submitReturn()">Process return</button></div></div>'+
+      '<p class="desc">Returns add stock back. You can return up to what was sold on that invoice.</p>'+
+    '</div></div>'+
+    '<div class="box"><h4>📋 Recent sales &amp; returns</h4><div id="se-feed">'+loadingBox()+'</div></div>');
+  loadInStock(); loadSalesFeed(); renderSCart();
   startAutoRefresh(()=>{ loadSalesFeed(true); loadInStock(true); });
 }
 function loadInStock(silent){
-  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
-    if(!d||!d.ok)return; IN_STOCK=d.inStock||[];
-    const sel=$('se-item'); if(!sel)return; const cur=sel.value;
-    sel.innerHTML='<option value="">Select item…</option>'+IN_STOCK.map(x=>'<option value="'+esc(x.item)+'" data-p="'+x.sell+'" data-s="'+x.current+'">'+esc(x.item)+'  ('+x.current+' left)</option>').join('');
-    if(cur)sel.value=cur; seFill();
-  }).catch(()=>{});
+  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{ if(!d||!d.ok)return; IN_STOCK=d.inStock||[]; renderSearch(); }).catch(()=>{});
 }
-function seFill(){
-  const sel=$('se-item'); if(!sel)return; const o=sel.selectedOptions[0];
-  const p=o?parseFloat(o.dataset.p||0):0; if(p&&!$('se-price').value)$('se-price').value=p;
-  const price=parseFloat(val('se-price'))||0, qty=parseFloat(val('se-qty'))||0;
-  $('se-amt').value=inr(price*qty);
+function renderSearch(){
+  const q=(val('se-search')||'').toLowerCase();
+  const list=IN_STOCK.filter(x=>x.item.toLowerCase().indexOf(q)>=0).slice(0,40);
+  if(!q){ $('se-results').innerHTML='<p class="desc">Type above to find items.</p>'; return; }
+  if(!list.length){ $('se-results').innerHTML='<p class="desc">No matching in-stock item.</p>'; return; }
+  $('se-results').innerHTML=list.map(x=>
+    '<div class="mt-row"><div class="nm">'+esc(x.item)+' <span style="color:var(--muted);font-size:12px">· '+inr(x.sell)+' · '+x.current+' left</span></div>'+
+    '<button class="icbtn ok" onclick="addSCart(\''+esc(x.item).replace(/'/g,"\\'")+'\','+x.sell+','+x.current+')">Add</button></div>').join('');
 }
-function submitSale(){
-  const item=val('se-item'),qty=val('se-qty');
-  if(!item)return toast('Select an item','err');
-  if(!(parseFloat(qty)>0))return toast('Enter quantity','err');
-  btnBusy('se-btn',true,'Generating');
-  api({action:'addSale',token:tGet(),item:item,qty:qty,sellPrice:val('se-price')}).then(d=>{
-    btnBusy('se-btn',false,'Generate bill');
+function addSCart(item,sell,max){
+  const ex=SCART.find(s=>s.item===item);
+  if(ex){ if(ex.qty<max)ex.qty++; else return toast('Only '+max+' in stock','err'); }
+  else SCART.push({item:item,qty:1,sell:sell,max:max});
+  renderSCart();
+}
+function scQty(i,v){ const n=parseInt(v,10)||1; if(n>SCART[i].max){SCART[i].qty=SCART[i].max;toast('Only '+SCART[i].max+' in stock','err');} else SCART[i].qty=Math.max(1,n); renderSCart(); }
+function scPrice(i,v){ SCART[i].sell=parseFloat(v)||0; renderSCart(); }
+function rmSCart(i){ SCART.splice(i,1); renderSCart(); }
+function renderSCart(){
+  const box=$('se-cart'); if(!box)return;
+  if(!SCART.length){ box.innerHTML='<p class="desc">Cart empty. Search and add items above.</p>'; return; }
+  let tot=0;
+  let h='<div class="tablewrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Amount</th><th>—</th></tr></thead><tbody>';
+  SCART.forEach((s,i)=>{ const amt=s.qty*s.sell; tot+=amt;
+    h+='<tr><td>'+esc(s.item)+'</td>'+
+       '<td><input type="number" min="1" value="'+s.qty+'" style="width:64px;padding:6px;border-radius:8px;background:var(--inp);border:1px solid var(--brd);color:var(--txt)" onchange="scQty('+i+',this.value)"></td>'+
+       '<td><input type="number" value="'+s.sell+'" style="width:90px;padding:6px;border-radius:8px;background:var(--inp);border:1px solid var(--brd);color:var(--txt)" onchange="scPrice('+i+',this.value)"></td>'+
+       '<td>'+inr(amt)+'</td><td><button class="icbtn dng" onclick="rmSCart('+i+')">Remove</button></td></tr>';
+  });
+  h+='</tbody></table></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">'+
+     '<div style="font-size:17px;font-weight:700">Total: '+inr(tot)+'</div>'+
+     '<button class="btn sm" id="se-gen" onclick="submitSaleBatch()">Generate bill</button></div>';
+  box.innerHTML=h;
+}
+function submitSaleBatch(){
+  if(!SCART.length)return toast('Cart is empty','err');
+  btnBusy('se-gen',true,'Generating');
+  api({action:'addSaleBatch',token:tGet(),items:SCART.map(s=>({item:s.item,qty:s.qty,sell:s.sell}))}).then(d=>{
+    btnBusy('se-gen',false,'Generate bill');
     if(!d.ok)return modalAlert(d.error,'Sale failed','⚠️');
-    showBill(d.bill); $('se-price').value='';$('se-qty').value='1';
+    showBill(d.bill); SCART=[]; renderSCart(); $('se-search').value=''; renderSearch();
     toast('Sale recorded','ok'); loadInStock(); loadSalesFeed();
-  }).catch(e=>{btnBusy('se-btn',false,'Generate bill');toast(e.message,'err');});
+  }).catch(e=>{btnBusy('se-gen',false,'Generate bill');toast(e.message,'err');});
 }
-function showBill(b){
-  $('se-billbox').innerHTML='<div style="text-align:center;border-bottom:1px dashed var(--brd);padding-bottom:14px;margin-bottom:14px">'+
+function billHTML(b){
+  let rows=b.lines.map(l=>'<tr><td style="padding:6px 0">'+esc(l.item)+'</td><td style="text-align:center">'+l.qty+'</td><td style="text-align:right">'+inr(l.price)+'</td><td style="text-align:right">'+inr(l.amount)+'</td></tr>').join('');
+  return '<div style="text-align:center;border-bottom:1px dashed var(--brd);padding-bottom:12px;margin-bottom:12px">'+
       '<div style="font-size:22px;font-weight:800;letter-spacing:1px">Ikxari</div>'+
       '<div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Your X Factor in Luxury</div></div>'+
-    '<table style="width:100%;font-size:14px;line-height:2.1">'+
-      '<tr><td style="color:var(--muted)">Invoice</td><td style="text-align:right"><b>'+esc(b.invoice)+'</b></td></tr>'+
-      '<tr><td style="color:var(--muted)">Date</td><td style="text-align:right">'+esc(b.date)+'</td></tr>'+
-      '<tr><td style="color:var(--muted)">Item</td><td style="text-align:right">'+esc(b.item)+'</td></tr>'+
-      '<tr><td style="color:var(--muted)">Qty × Price</td><td style="text-align:right">'+b.qty+' × '+inr(b.price)+'</td></tr>'+
-      '<tr><td style="color:var(--muted)">Sold by</td><td style="text-align:right">'+esc(b.by)+'</td></tr></table>'+
-    '<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--brd);margin-top:10px;padding-top:12px;font-size:18px;font-weight:700"><span>Total</span><span>'+inr(b.amount)+'</span></div>'+
-    '<p style="text-align:center;color:var(--muted);font-size:12px;margin-top:14px">Stock left for this item: '+b.remaining+'</p>';
+    '<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px"><span>'+esc(b.invoice)+'</span><span>'+esc(b.date)+'</span></div>'+
+    '<table style="width:100%;font-size:13.5px;border-collapse:collapse"><thead><tr style="color:var(--muted);font-size:12px"><th style="text-align:left">Item</th><th>Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amount</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--brd);margin-top:10px;padding-top:10px;font-size:18px;font-weight:700"><span>Total</span><span>'+inr(b.total)+'</span></div>'+
+    '<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:10px">Sold by '+esc(b.by)+'</div>';
 }
+function showBill(b){
+  $('se-billbox').innerHTML='<div id="billarea">'+billHTML(b)+'</div>'+
+    '<button class="btn ghost sm" style="margin-top:14px" onclick="printBill()">🖨️ Print bill</button>';
+  window._lastBill=b;
+}
+function printBill(){
+  const b=window._lastBill; if(!b)return;
+  const w=window.open('','_blank','width=420,height=640');
+  w.document.write('<html><head><title>'+b.invoice+'</title>'+
+    '<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600;700;800&display=swap" rel="stylesheet">'+
+    '<style>body{font-family:Jost,Arial,sans-serif;padding:20px;color:#111}table{width:100%;border-collapse:collapse}th,td{padding:5px 0}'+
+    '.h{text-align:center;border-bottom:1px dashed #999;padding-bottom:10px;margin-bottom:10px}.b{font-size:22px;font-weight:800}.t{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#666}'+
+    '.tot{display:flex;justify-content:space-between;border-top:1px dashed #999;margin-top:8px;padding-top:8px;font-size:18px;font-weight:700}</style></head><body>'+
+    '<div class="h"><div class="b">Ikxari</div><div class="t">Your X Factor in Luxury</div></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px;color:#666"><span>'+b.invoice+'</span><span>'+b.date+'</span></div>'+
+    '<table><thead><tr style="font-size:12px;color:#666"><th style="text-align:left">Item</th><th>Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amt</th></tr></thead><tbody>'+
+    b.lines.map(l=>'<tr><td>'+l.item+'</td><td style="text-align:center">'+l.qty+'</td><td style="text-align:right">₹'+Math.round(l.price)+'</td><td style="text-align:right">₹'+Math.round(l.amount)+'</td></tr>').join('')+
+    '</tbody></table><div class="tot"><span>Total</span><span>₹'+Math.round(b.total).toLocaleString('en-IN')+'</span></div>'+
+    '<div style="text-align:center;color:#666;font-size:11px;margin-top:10px">Sold by '+b.by+'</div>'+
+    '</body></html>');
+  w.document.close(); setTimeout(()=>{w.print();},400);
+}
+function submitReturn(){
+  const inv=val('sr-inv'),item=val('sr-item'),qty=val('sr-qty');
+  if(!inv||!item)return toast('Invoice and item required','err');
+  btnBusy('sr-btn',true,'Processing');
+  api({action:'saleReturn',token:tGet(),refInvoice:inv,item:item,qty:qty}).then(d=>{
+    btnBusy('sr-btn',false,'Process return');
+    if(!d.ok)return modalAlert(d.error,'Return failed','⚠️');
+    ['sr-inv','sr-item'].forEach(x=>$(x).value=''); $('sr-qty').value='1';
+    toast(d.msg,'ok'); loadSalesFeed(); loadInStock();
+  }).catch(e=>{btnBusy('sr-btn',false,'Process return');toast(e.message,'err');});
+}
+function returnFrom(inv,item){ $('sr-inv').value=inv; $('sr-item').value=item; $('sr-inv').scrollIntoView({behavior:'smooth'}); toast('Return form filled','ok'); }
 function loadSalesFeed(silent){
   (silent?apiS:api)({action:'salesFeed',token:tGet()}).then(d=>{
-    if(!d||!d.ok)return;
-    $('se-feed').innerHTML=tbl(['Invoice','Date','Item','Qty','Price','Amount','By'],
-      (d.feed||[]).map(r=>[esc(r.invoice),esc(r.date),esc(r.item),r.qty,inr(r.price),inr(r.amount),esc(r.by)]));
+    if(!d||!d.ok)return; SFEED=d.feed||[];
+    $('se-feed').innerHTML=tbl(['Invoice','Date','Kind','Item','Qty','Price','Amount','By','—'],
+      SFEED.map(r=>[esc(r.invoice),esc(r.date),
+        '<span class="badge '+(r.kind==='Return'?'bg-Rejected':'bg-Active')+'">'+esc(r.kind)+'</span>',
+        esc(r.item),r.qty,inr(r.price),inr(r.amount),esc(r.by),
+        (r.kind==='Sale'? (r.editable?'<button class="icbtn" onclick="editSLine(\''+r.id+'\','+r.qty+','+r.price+')">Edit</button> ':'')+
+           '<button class="icbtn dng" onclick="returnFrom(\''+r.invoice+'\',\''+esc(r.item).replace(/'/g,"\\'")+'\')">Return</button>' : '—')]));
   }).catch(()=>{});
+}
+function editSLine(id,qty,price){
+  fmForm('Edit sale (within 6h) — '+id,
+    '<div class="row2"><div class="field"><label>Qty</label><input id="es-qty" type="number" min="1" value="'+qty+'"></div>'+
+    '<div class="field"><label>Selling price</label><input id="es-price" type="number" value="'+price+'"></div></div>'+
+    '<button class="btn" onclick="saveSLine(\''+id+'\')">Save changes</button>');
+}
+function saveSLine(id){
+  closeForm();
+  api({action:'editSale',token:tGet(),id:id,qty:val('es-qty'),sell:val('es-price')}).then(d=>{
+    toast(d.ok?d.msg:d.error,d.ok?'ok':'err'); if(d.ok){loadSalesFeed();loadInStock();}
+  }).catch(e=>toast(e.message,'err'));
 }
 
 /* ---------- Inventory (live closing stock) ---------- */
@@ -1023,6 +1149,7 @@ function loadInventory(silent){
         '<b style="color:'+(m.current<=0?'#ff97a2':(m.current<=2?'#ffce85':'#7fe9c0'))+'">'+m.current+'</b>',inr(m.sell),inr(m.value)]))+'</div>';
   }).catch(e=>{ if(!silent)$('iv').innerHTML=connBox(e); });
 }
+
 
 /* ---------- User Management ---------- */
 let USERS=[],ROLES_AVAIL=['Sales Executive','Accountant','Manager'];
@@ -1128,8 +1255,7 @@ function openCreate(){
     '<div class="field"><label>Full name</label><input id="cu-name" placeholder="Name"></div>'+
     '<div class="row2"><div class="field"><label>Email</label><input id="cu-email" type="email" placeholder="you@company.com"></div>'+
     '<div class="field"><label>Mobile</label><input id="cu-mobile" placeholder="10-digit"></div></div>'+
-    '<div class="row2"><div class="field"><label>Department</label><input id="cu-dept" placeholder="e.g. Sales"></div>'+
-    '<div class="field"><label>Employee ID</label><input id="cu-emp" placeholder="e.g. SP-12"></div></div>'+
+    '<div class="field"><label>Department</label><input id="cu-dept" placeholder="e.g. Sales"></div>'+
     '<div class="row2"><div class="field"><label>Role</label><select id="cu-role">'+opts+'</select></div>'+
     '<div class="field"><label>Password</label><div class="pwrap"><input id="cu-pass" type="password" placeholder="min 6 chars"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div></div>'+
     '<button class="btn" id="cu-btn" onclick="confirmCreate()">Create & email credentials</button>');
@@ -1139,7 +1265,7 @@ function confirmCreate(){
   if(!name||!email||!pass)return toast('Name, email and password required','err');
   btnBusy('cu-btn',true,'Creating');
   api({action:'createUser',token:tGet(),fullName:name,email,mobile:val('cu-mobile'),department:val('cu-dept'),
-       employeeId:val('cu-emp'),role:val('cu-role'),password:pass}).then(d=>{
+       role:val('cu-role'),password:pass}).then(d=>{
     btnBusy('cu-btn',false,'Create & email credentials');
     if(!d.ok)return toast(d.error,'err');
     closeForm();toast(d.msg,'ok');loadUsers();
@@ -1215,10 +1341,19 @@ function pushNotice(on){
   }).catch(e=>toast(e.message,'err'));
 }
 function toggleMaint(page,on){
-  const msg=on?(prompt('Maintenance message for '+page+':','This section is temporarily under maintenance.')||'This section is temporarily under maintenance.'):'';
+  if(on){
+    fmForm('Maintenance — '+page,
+      '<div class="field"><label>Message shown to users</label><textarea id="mt-msg" rows="2">This section is temporarily under maintenance.</textarea></div>'+
+      '<button class="btn" onclick="applyMaint(\''+page+'\',true)">Set to maintenance</button>');
+  } else {
+    applyMaint(page,false,'');
+  }
+}
+function applyMaint(page,on){
+  const msg=on?val('mt-msg'):''; if(on)closeForm();
   api({action:'setMaintenance',token:tGet(),page:page,on:on,message:msg}).then(d=>{
     if(!d.ok){toast(d.error,'err');return renderSystem();}
-    CONFIG.maintenance=d.maintenance; toast(on?page+' set to maintenance':page+' restored','ok');
+    CONFIG.maintenance=d.maintenance; toast(on?page+' set to maintenance':page+' restored','ok'); renderSystem();
   }).catch(e=>toast(e.message,'err'));
 }
 
@@ -1226,8 +1361,10 @@ function renderSettings(){
   setContent(
     '<div class="box"><h4>👤 Profile</h4>'+
       '<div class="cards" style="margin-bottom:0">'+
-        statCard('Name',esc(ME.fullName))+statCard('Email',esc(ME.email))+
-        statCard('Role',esc(ME.role))+statCard('Department',esc(ME.department||'—'))+
+        '<div class="pcard"><div class="pv">'+esc(ME.fullName)+'</div><div class="pl">Name</div></div>'+
+        '<div class="pcard"><div class="pv">'+esc(ME.email)+'</div><div class="pl">Email</div></div>'+
+        '<div class="pcard"><div class="pv">'+esc(ME.role)+'</div><div class="pl">Role</div></div>'+
+        '<div class="pcard"><div class="pv">'+esc(ME.department||'—')+'</div><div class="pl">Department</div></div>'+
       '</div></div>'+
     '<div class="box"><h4>🔒 Change password</h4>'+
       '<div class="field"><label>Current password</label><div class="pwrap"><input id="cp-old" type="password" placeholder="current"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>'+
