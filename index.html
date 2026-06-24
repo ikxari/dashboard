@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Ikxari - Beyond Fashion</title>
+<title>Ikxari - Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -81,8 +81,8 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 
 /* ---------- APP SHELL ---------- */
 .app{display:none;position:relative;z-index:1;min-height:100dvh;flex-direction:column}
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:14px;padding:13px 20px;
-  background:rgba(13,13,24,.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--brd)}
+.apphead{position:sticky;top:0;z-index:50;background:rgba(7,7,16,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--brd)}
+.topbar{display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--brd)}
 .topbar .logo{display:flex;align-items:center;gap:11px;margin-right:auto}
 .topbar h1{font-size:17px;font-weight:700;letter-spacing:.4px}
 .topbar .tag{font-size:11px;color:var(--muted)}
@@ -91,8 +91,7 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
   display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px}
 .uchip .un{font-size:13px;font-weight:500;line-height:1.1}
 .uchip .ur{font-size:10.5px;color:var(--muted)}
-.nav{display:flex;gap:8px;padding:12px 18px;overflow-x:auto;justify-content:safe center;border-bottom:1px solid var(--brd);position:sticky;top:57px;
-  z-index:40;background:rgba(7,7,16,.6);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.nav{display:flex;gap:8px;padding:12px 18px;overflow-x:auto;justify-content:safe center}
 .nav::-webkit-scrollbar{display:none}
 .nav button{flex-shrink:0;padding:9px 16px;border-radius:30px;border:1px solid var(--brd);background:var(--inp);
   color:var(--muted);font-family:'Jost';font-size:13.5px;font-weight:500;cursor:pointer;transition:.2s;white-space:nowrap}
@@ -194,6 +193,25 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .toast.ok{border-color:rgba(55,211,153,.4)} .toast.err{border-color:rgba(255,93,108,.4)}
 
 /* desktop-only: mobile breakpoints intentionally removed */
+.notice{display:flex;align-items:center;gap:12px;padding:12px 20px;font-size:13.5px;font-weight:500;border-bottom:1px solid var(--brd)}
+.notice.info{background:linear-gradient(90deg,rgba(70,181,255,.18),rgba(70,181,255,.06));color:#cfeaff}
+.notice.warn{background:linear-gradient(90deg,rgba(255,181,71,.2),rgba(255,181,71,.06));color:#ffe3b0}
+.notice.alert{background:linear-gradient(90deg,rgba(255,93,108,.22),rgba(255,93,108,.06));color:#ffc2c8}
+.notice .ic{font-size:17px}
+.maint{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 24px;
+  background:var(--card);border:1px dashed var(--brd);border-radius:18px}
+.maint .ic{font-size:50px;margin-bottom:14px}
+.maint h3{font-size:20px;font-weight:700;margin-bottom:8px}
+.maint p{color:var(--muted);font-size:14px;max-width:440px;line-height:1.6}
+.mt-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border:1px solid var(--brd);border-radius:12px;background:var(--inp);margin-bottom:9px}
+.mt-row .nm{font-size:14px;font-weight:500}
+.switch{position:relative;width:46px;height:26px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.12);border-radius:30px;transition:.25s}
+.slider:before{content:"";position:absolute;height:18px;width:18px;left:4px;bottom:4px;background:#fff;border-radius:50%;transition:.25s}
+.switch input:checked+.slider{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.switch input:checked+.slider:before{transform:translateX(20px)}
+.rankwrap{display:flex;flex-direction:column}
 </style>
 </head>
 <body>
@@ -280,12 +298,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <!-- ============ APP ============ -->
 <div class="app" id="appView">
-  <div class="topbar">
-    <div class="logo"><div class="dot">SP</div><div><h1>Ikxari ERP</h1><div class="tag">M/S S. P. Fashion · Purulia</div></div></div>
-    <div class="uchip"><div class="av" id="u-av">S</div><div><div class="un" id="u-name">User</div><div class="ur" id="u-role">Role</div></div></div>
-    <button class="btn ghost sm" onclick="doLogout()">Sign Out</button>
+  <div class="apphead">
+    <div class="topbar">
+      <div class="logo"><div class="dot">SP</div><div><h1>Ikxari ERP</h1><div class="tag">M/S S. P. Fashion · Purulia</div></div></div>
+      <div class="uchip"><div class="av" id="u-av">S</div><div><div class="un" id="u-name">User</div><div class="ur" id="u-role">Role</div></div></div>
+      <button class="btn ghost sm" onclick="doLogout()">Sign Out</button>
+    </div>
+    <div class="nav" id="nav"></div>
   </div>
-  <div class="nav" id="nav"></div>
+  <div id="notice"></div>
   <div class="content" id="content"></div>
 </div>
 
@@ -310,7 +331,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbzdBkFoRX6bS1x3gP3TV8GOb8AeeQRq4bclFoTIixaF-C3PfBmWANzFsixLT3oNHWF7/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbytslIzgIC7mfonWMaiBMAxgqHMhK3ceaAKYq7Gt9725YVH3hhnmlimr-GDdoihaSby/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -425,9 +446,11 @@ const TABS=[
   {id:'users',    label:'User Management', rank:4},
   {id:'activity', label:'Login Activity',  rank:4},
   {id:'audit',    label:'Audit Log',       rank:4},
+  {id:'system',   label:'System',          rank:4},
   {id:'settings', label:'Settings',        rank:1}
 ];
 
+let CONFIG={maintenance:{},notice:{on:false}};
 function enterApp(user){
   ME=user;
   $('authView').style.display='none';
@@ -436,8 +459,19 @@ function enterApp(user){
   $('u-role').textContent=user.role;
   $('u-av').textContent=(user.fullName||'U').charAt(0).toUpperCase();
   buildNav();
-  const first=TABS.find(t=>ME.rank>=t.rank);
-  openTab(first?first.id:'settings');
+  loadConfig(()=>{ const first=TABS.find(t=>ME.rank>=t.rank); openTab(first?first.id:'settings'); });
+}
+function loadConfig(cb){
+  api({action:'getConfig',token:tGet()}).then(d=>{
+    if(d.ok){ CONFIG={maintenance:d.maintenance||{},notice:d.notice||{on:false}}; }
+    paintNotice(); if(cb)cb();
+  }).catch(()=>{ if(cb)cb(); });
+}
+function paintNotice(){
+  const n=CONFIG.notice;
+  if(n&&n.on&&n.text){ const t=n.type||'info';
+    $('notice').innerHTML='<div class="notice '+t+'"><span class="ic">'+(t==='alert'?'🚨':t==='warn'?'⚠️':'📢')+'</span><span>'+esc(n.text)+'</span></div>'; }
+  else $('notice').innerHTML='';
 }
 function buildNav(){
   const nav=$('nav');nav.innerHTML='';
@@ -452,6 +486,10 @@ function openTab(id){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
   const tb=$('tab-'+id);if(tb)tb.classList.add('active');
   const tab=TABS.find(t=>t.id===id);
+  // maintenance gate (super admin bypasses to still manage)
+  if(CONFIG.maintenance&&CONFIG.maintenance[id]&&ME.rank<4){
+    return setContent('<div class="maint"><div class="ic">🛠️</div><h3>'+esc(tab?tab.label:'Page')+' — Under Maintenance</h3><p>'+esc(CONFIG.maintenance[id])+'</p></div>');
+  }
   if(tab && tab.soon)return renderSoon(tab.label);
   if(id==='overview')return renderOverview();
   if(id==='sales')return renderSales();
@@ -465,6 +503,7 @@ function openTab(id){
   if(id==='users')return renderUsers();
   if(id==='activity')return renderActivity();
   if(id==='audit')return renderAudit();
+  if(id==='system')return renderSystem();
   if(id==='settings')return renderSettings();
 }
 function setContent(html){$('content').innerHTML='<div class="page show">'+html+'</div>';}
@@ -552,11 +591,44 @@ function hcPie3D(elId,labels,data,money){
   if(typeof Highcharts==='undefined')return; var el=hcEl(elId,340); if(!el)return;
   var pts=labels.map(function(l,i){return {name:l,y:Math.round(data[i])};});
   Highcharts.chart(el,{chart:{type:'pie',options3d:{enabled:true,alpha:52,beta:0}},
-    plotOptions:{pie:{depth:48,innerSize:'42%',borderWidth:1,borderColor:'rgba(7,7,16,.5)',
+    plotOptions:{pie:{depth:48,innerSize:'42%',center:['50%','50%'],size:'85%',borderWidth:1,borderColor:'rgba(7,7,16,.5)',
       dataLabels:{enabled:true,distance:14,style:{color:'#cfd3e2',textOutline:'none',fontWeight:'500',fontFamily:'Jost, sans-serif'},
         formatter:function(){return this.point.name+': '+(money?inrS(this.y):Number(this.y).toLocaleString('en-IN'));}}}},
     series:[{name:'',data:pts}],
     tooltip:{formatter:function(){return '<b>'+this.point.name+'</b><br/>'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'))+' ('+this.percentage.toFixed(1)+'%)';}}});
+}
+/* Premium enterprise vertical bar — gradient, rounded top, value labels, rank (no toy 3D) */
+function hcBarV(elId,names,values,money){
+  if(typeof Highcharts==='undefined')return; var el=hcEl(elId,360); if(!el)return;
+  var cats=names.map(function(n,i){return '#'+(i+1)+'  '+n;});
+  Highcharts.chart(el,{chart:{type:'column'},
+    xAxis:{categories:cats,labels:{rotation:-45,style:{fontSize:'11px',color:'#9aa0b4',fontFamily:'Jost, sans-serif'}},lineColor:'rgba(255,255,255,.08)',tickLength:0},
+    yAxis:{gridLineColor:'rgba(255,255,255,.05)',labels:{style:{color:'#7e8497'},formatter:function(){return money?inrS(this.value):this.value;}},title:{text:null}},
+    legend:{enabled:false},
+    plotOptions:{column:{borderRadius:8,pointPadding:.12,groupPadding:.1,borderWidth:0,
+      color:{linearGradient:{x1:0,x2:0,y1:0,y2:1},stops:[[0,'#9a7bff'],[1,'#5b3fd6']]},
+      shadow:{color:'rgba(124,92,255,.22)',width:7,offsetX:0,offsetY:3,opacity:.5},
+      dataLabels:{enabled:true,inside:false,y:-4,crop:false,overflow:'allow',
+        style:{color:'#cfd3e2',fontWeight:'600',fontFamily:'Jost, sans-serif',textOutline:'none',fontSize:'11px'},
+        formatter:function(){return money?inrS(this.y):Number(this.y).toLocaleString('en-IN');}},
+      states:{hover:{brightness:.14}}}},
+    series:[{name:'',data:values.map(x=>Math.round(x))}],
+    tooltip:{useHTML:true,backgroundColor:'rgba(20,20,32,.96)',borderColor:'rgba(124,92,255,.4)',
+      formatter:function(){return '<div style="font-family:Jost;padding:2px 4px"><b>'+this.key+'</b><br/><span style="font-size:15px;color:#c9bdff">'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'))+'</span></div>';}}});
+}
+/* 3D cylinder bars (premium, real — closest to a cylindrical 3D budget chart) */
+function hcCylinder(elId,names,values,money){
+  if(typeof Highcharts==='undefined'||!Highcharts.seriesTypes.cylinder)return hcBarV(elId,names,values,money);
+  var el=hcEl(elId,360); if(!el)return;
+  Highcharts.chart(el,{chart:{type:'cylinder',options3d:{enabled:true,alpha:15,beta:18,depth:60,viewDistance:25}},
+    xAxis:{categories:names,labels:{style:{color:'#9aa0b4',fontFamily:'Jost, sans-serif'}}},
+    yAxis:{gridLineColor:'rgba(255,255,255,.06)',labels:{style:{color:'#7e8497'},formatter:function(){return money?inrS(this.value):this.value;}},title:{text:null}},
+    legend:{enabled:false},
+    plotOptions:{cylinder:{depth:45,colorByPoint:true,
+      dataLabels:{enabled:true,style:{color:'#cfd3e2',textOutline:'none',fontFamily:'Jost, sans-serif',fontWeight:'600'},formatter:function(){return money?inrS(this.y):Number(this.y).toLocaleString('en-IN');}}}},
+    colors:HC_COLORS,
+    series:[{name:'',data:values.map(x=>Math.round(x))}],
+    tooltip:{formatter:function(){return '<b>'+this.x+'</b><br/>'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'));}}});
 }
 function drawTrend(elId,trend){ trend=trend||[]; hcArea(elId,trend.map(x=>x.date),[
   {name:'Net Sales',data:trend.map(x=>Math.round(x.sales)),color:'#7c5cff'},
@@ -604,7 +676,7 @@ function renderOverview(){
 
 /* ---------- Sales Analytics (live) ---------- */
 function renderSales(){
-  setContent(pagehead('Sales Analytics','Revenue, profit and performance — live','sales')+dateBar()+'<div id="sa">'+loadingBox()+'</div>');
+  setContent(pagehead('Welcome, '+ME.fullName.split(' ')[0]+' 👋','Sales analytics — revenue, profit & performance','sales')+dateBar()+'<div id="sa">'+loadingBox()+'</div>');
   dapi('getSales').then(d=>{
     if(!d.ok)return ($('sa').innerHTML=errBox(d));
     const k=d.kpis;
@@ -688,50 +760,41 @@ function renderCRM(){
       statCard('Repeat Rate',k.repeatRate.toFixed(1)+'%')+
       statCard('Avg Spend',inrS(k.avgSpend))+
     '</div>'+
-    '<div class="grid2">'+
-      '<div class="chartbox"><h4>👑 Top customers (by spend)</h4><div id="crChart"></div></div>'+
-      '<div class="box"><h4>🧾 Customer purchase history</h4>'+tbl(['Customer','Bills','Spend'],
-        (d.topCustomers||[]).map(c=>[esc(c.name),Number(c.bills).toLocaleString('en-IN'),inr(c.sales)]))+'</div>'+
-    '</div>';
-    var tc=(d.topCustomers||[]).slice(0,10); hbar('crChart',tc.map(x=>x.name),tc.map(x=>x.sales),'#c9bdff',true);
+    '<div class="chartbox"><h4>👑 Top customers by spend</h4><div id="crChart"></div></div>'+
+    '<div class="box"><h4>🧾 Top 25 customers</h4>'+tbl(['#','Customer','Bills','Spend'],
+      (d.topCustomers||[]).map((c,i)=>[(i+1),esc(c.name),Number(c.bills).toLocaleString('en-IN'),inr(c.sales)]))+'</div>';
+    var tc=(d.topCustomers||[]).slice(0,15); hcBarV('crChart',tc.map(x=>x.name),tc.map(x=>x.sales),true);
   }).catch(e=>$('cr').innerHTML=connBox(e));
 }
 
 /* ---------- Vendor ---------- */
 function renderVendor(){
-  setContent(pagehead('Vendor','Vendor ranking by purchase value — live','vendor')+dateBar()+'<div id="vn">'+loadingBox()+'</div>');
+  setContent(pagehead('Vendor','Which distributor\'s goods sell the most','vendor')+dateBar()+'<div id="vn">'+loadingBox()+'</div>');
   dapi('getVendor').then(d=>{
     if(!d.ok)return($('vn').innerHTML=errBox(d)); const k=d.kpis;
+    const sheetUrl=d.sheetId?('https://docs.google.com/spreadsheets/d/'+d.sheetId+'/edit'):'';
     $('vn').innerHTML='<div class="cards">'+
       statCard('Vendors',Number(k.vendors).toLocaleString('en-IN'))+
-      statCard('Purchase Value',inrS(k.purchaseValue))+
+      statCard('Sale Value',inrS(k.saleValue),'goods sold')+
     '</div>'+
-    '<div class="chartbox"><h4>🏆 Vendor ranking</h4><div id="vnChart"></div></div>'+
-    '<div class="box"><h4>📋 Vendor detail</h4>'+tbl(['#','Vendor','Qty','Purchase Value'],
-      (d.ranking||[]).map((v,i)=>[(i+1),esc(v.name),Number(v.qty).toLocaleString('en-IN'),inr(v.value)]))+'</div>';
-    var r=(d.ranking||[]).slice(0,12); hbar('vnChart',r.map(x=>x.name),r.map(x=>x.value),'#7c5cff',true);
+    '<div class="chartbox"><h4>🏆 Top vendors by sale value</h4><div id="vnChart"></div></div>'+
+    '<div class="box"><h4>📋 Top 25 vendors'+(sheetUrl?'  <a href="'+sheetUrl+'" target="_blank" style="font-size:12px;color:#46b5ff;font-weight:500;margin-left:6px">Open full data in Google Sheet ↗</a>':'')+'</h4>'+
+      tbl(['#','Vendor','Qty','Sale Value'],(d.ranking||[]).map((v,i)=>[(i+1),esc(v.name),Number(v.qty).toLocaleString('en-IN'),inr(v.value)]))+'</div>';
+    var r=(d.ranking||[]).slice(0,15); hcBarV('vnChart',r.map(x=>x.name),r.map(x=>x.value),true);
   }).catch(e=>$('vn').innerHTML=connBox(e));
 }
 
 /* ---------- GST ---------- */
 function renderGST(){
-  setContent(pagehead('GST','GST collected, taxable revenue & rate split — live','gst')+dateBar()+'<div id="gs">'+loadingBox()+'</div>');
+  setContent(pagehead('GST','How much GST you\'ve captured (held for government)','gst')+dateBar()+'<div id="gs">'+loadingBox()+'</div>');
   dapi('getGST').then(d=>{
     if(!d.ok)return($('gs').innerHTML=errBox(d)); const k=d.kpis;
     $('gs').innerHTML='<div class="cards">'+
-      statCard('GST Collected',inrS(k.gstCollected))+
+      statCard('GST Captured',inrS(k.gstCollected),'held for govt')+
       statCard('Taxable Revenue',inrS(k.taxableRevenue))+
-      statCard('Total Revenue',inrS(k.totalRevenue))+
-      statCard('Effective Rate',k.effRate.toFixed(2)+'%')+
     '</div>'+
-    '<div class="chartbox"><h4>📈 GST collected trend</h4><div id="gsTrend"></div></div>'+
-    '<div class="grid2">'+
-      '<div class="chartbox"><h4>🧮 GST by rate</h4><div id="gsRate"></div></div>'+
-      '<div class="box"><h4>📋 GST summary by rate</h4>'+tbl(['Rate','Taxable','GST'],
-        (d.byRate||[]).map(r=>[esc(r.rate),inr(r.taxable),inr(r.gst)]))+'</div>'+
-    '</div>';
+    '<div class="chartbox"><h4>📈 GST captured trend</h4><div id="gsTrend"></div></div>';
     var tr=d.trend||[]; hcArea('gsTrend',tr.map(x=>x.date),[{name:'GST',data:tr.map(x=>Math.round(x.gst)),color:'#37d399'}]);
-    var br=d.byRate||[]; donut('gsRate',br.map(x=>x.rate),br.map(x=>x.gst),true);
   }).catch(e=>$('gs').innerHTML=connBox(e));
 }
 
@@ -963,6 +1026,49 @@ function renderAudit(){
 }
 
 /* ---------- Settings ---------- */
+/* ---------- System (Super Admin): maintenance + notices ---------- */
+function renderSystem(){
+  setContent(pagehead('System','Maintenance mode & broadcast notices','system')+'<div id="sy">'+loadingBox()+'</div>');
+  api({action:'getConfig',token:tGet()}).then(d=>{
+    if(!d.ok)return($('sy').innerHTML=errBox(d));
+    CONFIG={maintenance:d.maintenance||{},notice:d.notice||{on:false}}; paintNotice();
+    const pages=TABS.filter(t=>['sales','returns','inventory','ims','purchase','crm','vendor','gst','expense','reports'].indexOf(t.id)>=0);
+    const n=CONFIG.notice||{};
+    let h='<div class="box"><h4>📢 Broadcast notice</h4>'+
+      '<p class="desc" style="margin-bottom:12px">Shows a banner to <b>every</b> user across the app.</p>'+
+      '<div class="field"><label>Message</label><textarea id="nt-text" rows="2" placeholder="e.g. Data refresh in progress, figures may update shortly.">'+esc(n.text||'')+'</textarea></div>'+
+      '<div class="row2"><div class="field"><label>Type</label><select id="nt-type">'+
+        ['info','warn','alert'].map(t=>'<option value="'+t+'"'+(n.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+
+        '<div class="field"><label>&nbsp;</label><div style="display:flex;gap:8px"><button class="btn sm" onclick="pushNotice(true)">Push notice</button><button class="btn ghost sm" onclick="pushNotice(false)">Clear</button></div></div></div>'+
+      (n.on?'<p class="desc" style="margin-top:6px;color:#7fe9c0">● Live now</p>':'')+
+    '</div>'+
+    '<div class="box"><h4>🛠️ Page maintenance</h4>'+
+      '<p class="desc" style="margin-bottom:14px">Toggle a page to maintenance. Non-admin users see a maintenance screen; you keep full access.</p>';
+    pages.forEach(p=>{
+      const on=!!(CONFIG.maintenance&&CONFIG.maintenance[p.id]);
+      h+='<div class="mt-row"><div class="nm">'+esc(p.label)+(on?' <span style="color:#ffce85;font-size:12px">· under maintenance</span>':'')+'</div>'+
+         '<label class="switch"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleMaint(\''+p.id+'\',this.checked)"><span class="slider"></span></label></div>';
+    });
+    h+='</div>';
+    $('sy').innerHTML=h;
+  }).catch(e=>$('sy').innerHTML=connBox(e));
+}
+function pushNotice(on){
+  const text=val('nt-text'), type=val('nt-type');
+  if(on&&!text)return toast('Type a message first','err');
+  api({action:'setNotice',token:tGet(),on:on,text:text,type:type}).then(d=>{
+    if(!d.ok)return toast(d.error,'err');
+    CONFIG.notice=d.notice; paintNotice(); toast(on?'Notice pushed to all users':'Notice cleared','ok');
+  }).catch(e=>toast(e.message,'err'));
+}
+function toggleMaint(page,on){
+  const msg=on?(prompt('Maintenance message for '+page+':','This section is temporarily under maintenance.')||'This section is temporarily under maintenance.'):'';
+  api({action:'setMaintenance',token:tGet(),page:page,on:on,message:msg}).then(d=>{
+    if(!d.ok){toast(d.error,'err');return renderSystem();}
+    CONFIG.maintenance=d.maintenance; toast(on?page+' set to maintenance':page+' restored','ok');
+  }).catch(e=>toast(e.message,'err'));
+}
+
 function renderSettings(){
   setContent(
     '<div class="box"><h4>👤 Profile</h4>'+
