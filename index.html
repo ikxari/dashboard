@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Ikxari - Beyond Fashion</title>
+<title>IKXARI ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.1/dist/apexcharts.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/highcharts-3d.js"></script>
+<script src="https://code.highcharts.com/modules/cylinder.js"></script>
 <style>
 :root{
   --bg:#070710; --txt:#eef0f7; --muted:#9aa0b4;
@@ -95,7 +97,7 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 .nav button{flex-shrink:0;padding:9px 16px;border-radius:30px;border:1px solid var(--brd);background:var(--inp);
   color:var(--muted);font-family:'Jost';font-size:13.5px;font-weight:500;cursor:pointer;transition:.2s;white-space:nowrap}
 .nav button.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;box-shadow:0 8px 20px rgba(124,92,255,.35)}
-.content{max-width:1100px;width:100%;margin:0 auto;padding:24px 20px 60px}
+.content{max-width:100%;width:100%;margin:0 auto;padding:24px 26px 60px}
 .page{display:none;animation:flFade .25s ease} .page.show{display:block}
 
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
@@ -109,10 +111,19 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 .chartbox{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:18px 14px 6px;margin-bottom:18px}
 .chartbox h4{font-size:15px;font-weight:600;margin:0 4px 6px;padding:0 4px;display:flex;align-items:center;gap:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-@media(max-width:760px){.grid2{grid-template-columns:1fr}}
 .pagehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px}
 .pagehead h3{font-size:20px;font-weight:700}
 .pagehead .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;background:var(--card);
+  border:1px solid var(--brd);border-radius:14px;padding:10px 12px}
+.datebar .dl{font-size:12px;color:var(--muted)}
+.datebar input[type=date]{padding:8px 10px;border-radius:10px;background:var(--inp);border:1px solid var(--brd);
+  color:var(--txt);font-family:'Jost';font-size:14px;color-scheme:dark}
+.datebar .drange{font-size:12px;color:#c9bdff;margin-left:auto}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:20px;border:1px solid var(--brd);background:var(--inp);color:var(--muted);
+  font-size:12.5px;cursor:pointer}
+.chip:hover{color:var(--txt);background:rgba(255,255,255,.08)}
 .welcome{background:linear-gradient(160deg,rgba(124,92,255,.16),rgba(70,181,255,.06));border:1px solid var(--brd);
   border-radius:18px;padding:26px;margin-bottom:20px}
 .welcome h3{font-size:22px;font-weight:700;margin-bottom:5px}
@@ -182,14 +193,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{border-color:rgba(55,211,153,.4)} .toast.err{border-color:rgba(255,93,108,.4)}
 
-@media(max-width:760px){
-  .shell{flex-direction:column;border-radius:18px;min-height:auto}
-  .brand{border-right:none;border-bottom:1px solid var(--brd);padding:30px 26px}
-  .brand .hero{font-size:22px}
-  .panel{padding:30px 26px}
-  .row2{grid-template-columns:1fr}
-  .topbar h1{font-size:15px} .uchip .un{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-}
+/* desktop-only: mobile breakpoints intentionally removed */
 </style>
 </head>
 <body>
@@ -306,7 +310,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbypgg03zUdokk9DCNhEnSvLaERThnUZKlXDBKmwx3HurgpsmdHRcTJmWy0qdjBzr75s/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbzdBkFoRX6bS1x3gP3TV8GOb8AeeQRq4bclFoTIixaF-C3PfBmWANzFsixLT3oNHWF7/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -407,19 +411,19 @@ function doReset(){
 /* ===================== APP ===================== */
 let ME=null;
 const TABS=[
-  {id:'overview', label:'Overview',        rank:1},
+  {id:'overview', label:'Overview',        rank:4},
   {id:'sales',    label:'Sales Analytics', rank:1},
-  {id:'returns',  label:'Returns',         rank:1, soon:true},
+  {id:'returns',  label:'Returns',         rank:1},
   {id:'inventory',label:'Inventory',       rank:1, soon:true},
   {id:'ims',      label:'IMS Center',      rank:1, soon:true},
-  {id:'purchase', label:'Purchase',        rank:1, soon:true},
-  {id:'crm',      label:'Customer CRM',    rank:1, soon:true},
-  {id:'vendor',   label:'Vendor',          rank:2, soon:true},
-  {id:'gst',      label:'GST',             rank:2, soon:true},
-  {id:'expense',  label:'Expense',         rank:2, soon:true},
-  {id:'reports',  label:'Reports',         rank:2, soon:true},
-  {id:'users',    label:'User Management', rank:3},
-  {id:'activity', label:'Login Activity',  rank:3},
+  {id:'purchase', label:'Purchase',        rank:1},
+  {id:'crm',      label:'Customer CRM',    rank:1},
+  {id:'vendor',   label:'Vendor',          rank:2},
+  {id:'gst',      label:'GST',             rank:2},
+  {id:'expense',  label:'Expense',         rank:2},
+  {id:'reports',  label:'Reports',         rank:2},
+  {id:'users',    label:'User Management', rank:4},
+  {id:'activity', label:'Login Activity',  rank:4},
   {id:'audit',    label:'Audit Log',       rank:4},
   {id:'settings', label:'Settings',        rank:1}
 ];
@@ -432,7 +436,8 @@ function enterApp(user){
   $('u-role').textContent=user.role;
   $('u-av').textContent=(user.fullName||'U').charAt(0).toUpperCase();
   buildNav();
-  openTab('overview');
+  const first=TABS.find(t=>ME.rank>=t.rank);
+  openTab(first?first.id:'settings');
 }
 function buildNav(){
   const nav=$('nav');nav.innerHTML='';
@@ -450,6 +455,13 @@ function openTab(id){
   if(tab && tab.soon)return renderSoon(tab.label);
   if(id==='overview')return renderOverview();
   if(id==='sales')return renderSales();
+  if(id==='returns')return renderReturns();
+  if(id==='purchase')return renderPurchase();
+  if(id==='crm')return renderCRM();
+  if(id==='vendor')return renderVendor();
+  if(id==='gst')return renderGST();
+  if(id==='expense')return renderExpense();
+  if(id==='reports')return renderReports();
   if(id==='users')return renderUsers();
   if(id==='activity')return renderActivity();
   if(id==='audit')return renderAudit();
@@ -457,74 +469,143 @@ function openTab(id){
 }
 function setContent(html){$('content').innerHTML='<div class="page show">'+html+'</div>';}
 
-/* ---------- formatters + chart helper ---------- */
+/* ---------- date filter ---------- */
+let DATE_FROM='', DATE_TO='', FORCE_FRESH=false;
+function dp(){ return {from:DATE_FROM, to:DATE_TO}; }
+function dapi(action){ var f=FORCE_FRESH; FORCE_FRESH=false; return api({action:action,token:tGet(),from:DATE_FROM,to:DATE_TO,fresh:f}); }
+function refreshTab(){ FORCE_FRESH=true; openTab(CUR); }
+function dateBar(){
+  return '<div class="datebar">'+
+    '<span class="dl">From</span><input type="date" id="df" value="'+DATE_FROM+'">'+
+    '<span class="dl">To</span><input type="date" id="dt" value="'+DATE_TO+'">'+
+    '<button class="btn sm" onclick="applyDates()">Apply</button>'+
+    '<button class="btn ghost sm" onclick="quickRange(\'all\')">All time</button>'+
+    '<div class="drange">'+(DATE_FROM||DATE_TO ? (DATE_FROM||'…')+' → '+(DATE_TO||'…') : 'All time')+'</div>'+
+  '</div>'+
+  '<div class="chips" style="margin:-6px 0 16px">'+
+    '<div class="chip" onclick="quickRange(\'7\')">Last 7d</div>'+
+    '<div class="chip" onclick="quickRange(\'30\')">Last 30d</div>'+
+    '<div class="chip" onclick="quickRange(\'90\')">Last 90d</div>'+
+    '<div class="chip" onclick="quickRange(\'tm\')">This month</div>'+
+    '<div class="chip" onclick="quickRange(\'ty\')">This year</div>'+
+  '</div>';
+}
+function applyDates(){ DATE_FROM=$('df').value||''; DATE_TO=$('dt').value||''; openTab(CUR); }
+function quickRange(r){
+  const t=new Date(), iso=d=>d.toISOString().slice(0,10);
+  if(r==='all'){DATE_FROM='';DATE_TO='';}
+  else if(r==='tm'){DATE_FROM=iso(new Date(t.getFullYear(),t.getMonth(),1));DATE_TO=iso(t);}
+  else if(r==='ty'){DATE_FROM=iso(new Date(t.getFullYear(),0,1));DATE_TO=iso(t);}
+  else{const n=parseInt(r,10);const f=new Date(t);f.setDate(f.getDate()-n+1);DATE_FROM=iso(f);DATE_TO=iso(t);}
+  openTab(CUR);
+}
 function inr(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
 function inrS(n){ n=n||0; var a=Math.abs(n);
   if(a>=1e7) return '₹'+(n/1e7).toFixed(2)+' Cr';
   if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+' L';
   if(a>=1e3) return '₹'+(n/1e3).toFixed(1)+'k';
   return '₹'+Math.round(n); }
-const CHART_BASE={ chart:{ background:'transparent', fontFamily:'Jost', toolbar:{show:false}, animations:{easing:'easeinout',speed:600} },
-  theme:{mode:'dark'}, grid:{borderColor:'rgba(255,255,255,.07)',strokeDashArray:4},
-  tooltip:{theme:'dark'}, dataLabels:{enabled:false}, legend:{labels:{colors:'#9aa0b4'}},
-  colors:['#7c5cff','#46b5ff','#37d399','#ffb547','#ff5d6c','#c9bdff'] };
-function chart(elId,opt){ var el=$(elId); if(!el||typeof ApexCharts==='undefined')return;
-  if(el._c){try{el._c.destroy()}catch(e){}} el._c=new ApexCharts(el,opt); el._c.render(); }
+/* ---------- Highcharts 3D theme + helpers ---------- */
+const HC_COLORS=['#7c5cff','#46b5ff','#37d399','#ffb547','#ff5d6c','#c9bdff','#7ad0ff','#ff8fa3'];
+if(typeof Highcharts!=='undefined'){
+  Highcharts.setOptions({
+    colors:HC_COLORS,
+    chart:{backgroundColor:'transparent',style:{fontFamily:'Jost, sans-serif'},spacing:[14,8,10,8]},
+    title:{text:undefined}, credits:{enabled:false},
+    legend:{itemStyle:{color:'#cfd3e2',fontWeight:'500',fontFamily:'Jost, sans-serif'},itemHoverStyle:{color:'#fff'}},
+    xAxis:{labels:{style:{color:'#9aa0b4',fontFamily:'Jost, sans-serif'}},lineColor:'rgba(255,255,255,.12)',tickColor:'rgba(255,255,255,.12)',gridLineColor:'rgba(255,255,255,.05)'},
+    yAxis:{labels:{style:{color:'#9aa0b4',fontFamily:'Jost, sans-serif'}},gridLineColor:'rgba(255,255,255,.06)',title:{text:null}},
+    tooltip:{backgroundColor:'rgba(20,20,32,.96)',borderColor:'rgba(255,255,255,.15)',borderRadius:10,style:{color:'#eef0f7',fontFamily:'Jost, sans-serif'}},
+    plotOptions:{series:{animation:{duration:750}}}
+  });
+}
+function hcEl(elId,h){ var el=$(elId); if(el) el.style.height=(h||320)+'px'; return el; }
+function grad(c){ return {linearGradient:{x1:0,x2:0,y1:0,y2:1},stops:[[0,Highcharts.color(c).setOpacity(.55).get('rgba')],[1,Highcharts.color(c).setOpacity(.04).get('rgba')]]}; }
+function hcArea(elId,cats,series){
+  if(typeof Highcharts==='undefined')return; var el=hcEl(elId,300); if(!el)return;
+  Highcharts.chart(el,{chart:{type:'area'},
+    xAxis:{categories:cats,tickInterval:Math.ceil((cats.length||1)/8)||1,labels:{rotation:-35}},
+    yAxis:{labels:{formatter:function(){return inrS(this.value);}}},
+    legend:{enabled:series.length>1},
+    plotOptions:{area:{lineWidth:2.5,marker:{enabled:false,states:{hover:{enabled:true,radius:4}}}}},
+    series:series.map(function(s){return {name:s.name,data:s.data,color:s.color,fillColor:grad(s.color)};}),
+    tooltip:{shared:true,formatter:function(){var pts=this.points||[this];var h='<b>'+this.x+'</b>';pts.forEach(function(p){h+='<br/>'+p.series.name+': <b>'+inr(p.y)+'</b>';});return h;}}});
+}
+function hcBarH(elId,cats,data,color,money){
+  if(typeof Highcharts==='undefined')return; var el=hcEl(elId,Math.max(240,(cats.length||1)*38+60)); if(!el)return;
+  Highcharts.chart(el,{chart:{type:'bar',options3d:{enabled:true,alpha:6,beta:14,depth:42,viewDistance:25}},
+    xAxis:{categories:cats},yAxis:{labels:{formatter:function(){return money?inrS(this.value):this.value;}}},legend:{enabled:false},
+    plotOptions:{bar:{depth:42,borderRadius:3,colorByPoint:true,edgeWidth:0,grouping:false}},
+    series:[{name:'',data:data}],
+    tooltip:{formatter:function(){return '<b>'+this.x+'</b><br/>'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'));}}});
+}
+function hcColumn(elId,cats,data,color,money){
+  if(typeof Highcharts==='undefined')return; var el=hcEl(elId,330); if(!el)return;
+  Highcharts.chart(el,{chart:{type:'column',options3d:{enabled:true,alpha:14,beta:16,depth:60,viewDistance:25}},
+    xAxis:{categories:cats,labels:{rotation:-40}},
+    yAxis:{labels:{formatter:function(){return money?inrS(this.value):this.value;}}},legend:{enabled:false},
+    plotOptions:{column:{depth:50,borderRadius:2,color:color||'#7c5cff',edgeWidth:0}},
+    series:[{name:'',data:data}],
+    tooltip:{formatter:function(){return '<b>'+this.x+'</b><br/>'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'));}}});
+}
+function hcPie3D(elId,labels,data,money){
+  if(typeof Highcharts==='undefined')return; var el=hcEl(elId,340); if(!el)return;
+  var pts=labels.map(function(l,i){return {name:l,y:Math.round(data[i])};});
+  Highcharts.chart(el,{chart:{type:'pie',options3d:{enabled:true,alpha:52,beta:0}},
+    plotOptions:{pie:{depth:48,innerSize:'42%',borderWidth:1,borderColor:'rgba(7,7,16,.5)',
+      dataLabels:{enabled:true,distance:14,style:{color:'#cfd3e2',textOutline:'none',fontWeight:'500',fontFamily:'Jost, sans-serif'},
+        formatter:function(){return this.point.name+': '+(money?inrS(this.y):Number(this.y).toLocaleString('en-IN'));}}}},
+    series:[{name:'',data:pts}],
+    tooltip:{formatter:function(){return '<b>'+this.point.name+'</b><br/>'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'))+' ('+this.percentage.toFixed(1)+'%)';}}});
+}
+function drawTrend(elId,trend){ trend=trend||[]; hcArea(elId,trend.map(x=>x.date),[
+  {name:'Net Sales',data:trend.map(x=>Math.round(x.sales)),color:'#7c5cff'},
+  {name:'Gross Profit',data:trend.map(x=>Math.round(x.gp)),color:'#46b5ff'}]); }
+function donut(elId,labels,series,money){ hcPie3D(elId,labels,series,money); }
+function hbar(elId,cats,data,color,money){ hcBarH(elId,cats,data,color,money); }
 function statCard(label,n,sub){return '<div class="stat"><div class="n">'+n+'</div><div class="l">'+label+(sub?' · '+sub:'')+'</div><div class="bar"></div></div>';}
 function pagehead(title,sub,tab){return '<div class="pagehead"><div><h3>'+esc(title)+'</h3><div class="sub">'+esc(sub)+'</div></div>'+
-  '<button class="btn ghost sm" onclick="openTab(\''+tab+'\')">↻ Refresh</button></div>';}
+  '<button class="btn ghost sm" onclick="refreshTab()">↻ Refresh</button></div>';}
 function loadingBox(){return '<div class="soon"><div class="ic">⏳</div><h3>Loading…</h3><p>Fetching live data from your sheet.</p></div>';}
 function noData(msg){return '<div class="soon"><div class="ic">📭</div><h3>No data</h3><p>'+esc(msg||'Nothing to show yet.')+'</p></div>';}
 
-/* ---------- Overview (live) ---------- */
+/* ---------- Overview = Activity Monitor (Super Admin) ---------- */
 function renderOverview(){
-  setContent(pagehead('Executive Overview','Live snapshot from Master Sales & Expenses','overview')+'<div id="ov">'+loadingBox()+'</div>');
-  api({action:'getOverview',token:tGet()}).then(d=>{
-    if(!d.ok)return ($('ov').innerHTML=errBox(d));
-    const k=d.kpis;
+  setContent(pagehead('Activity Monitor','Who\'s active, what changed, live system health','overview')+'<div id="ov">'+loadingBox()+'</div>');
+  api({action:'getMonitor',token:tGet()}).then(d=>{
+    if(!d.ok)return($('ov').innerHTML=errBox(d)); const c=d.counts;
     $('ov').innerHTML=
       '<div class="cards">'+
-        statCard('Revenue',inrS(k.revenue))+
-        statCard('Net Sales',inrS(k.netSales))+
-        statCard('Gross Profit',inrS(k.grossProfit),k.margin.toFixed(1)+'%')+
-        statCard('Net Profit',inrS(k.netProfit))+
-        statCard('Orders',Number(k.orders).toLocaleString('en-IN'))+
-        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'))+
-        statCard('GST',inrS(k.gst))+
-        statCard('Expenses',inrS(k.expense))+
+        statCard('Total Users',c.users)+
+        statCard('Active',c.active)+
+        statCard('Pending',c.pending)+
+        statCard('Online Now',c.sessions)+
+        statCard('Logins Today',c.loginsToday)+
+        statCard('Failed Today',c.failToday)+
+        statCard('Audit Events',c.auditToday,'today')+
+        statCard('Disabled',c.disabled)+
       '</div>'+
-      '<div class="chartbox"><h4>📈 Sales & gross-profit trend</h4><div id="ovTrend"></div></div>'+
       '<div class="grid2">'+
-        '<div class="chartbox"><h4>🏆 Top items by sales</h4><div id="ovItems"></div></div>'+
-        '<div class="chartbox"><h4>💸 Expense by category</h4><div id="ovExp"></div></div>'+
-      '</div>';
-    drawTrend('ovTrend',d.trend);
-    const ti=(d.topItems||[]);
-    chart('ovItems',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'bar',height:300}),
-      plotOptions:{bar:{horizontal:true,borderRadius:5,barHeight:'62%'}},
-      series:[{name:'Sales',data:ti.map(x=>Math.round(x.sales))}],
-      xaxis:{categories:ti.map(x=>x.name),labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}},
-      yaxis:{labels:{style:{colors:'#9aa0b4'}}}}));
-    const ec=(d.expenseCats||[]);
-    chart('ovExp',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'donut',height:300}),
-      labels:ec.map(x=>x.name),series:ec.map(x=>Math.round(x.amount)),
-      legend:{position:'bottom',labels:{colors:'#9aa0b4'}},
-      tooltip:{theme:'dark',y:{formatter:v=>inr(v)}}}));
+        '<div class="chartbox"><h4>👥 Users by role</h4><div id="ovRole"></div></div>'+
+        '<div class="chartbox"><h4>🟢 Users by status</h4><div id="ovStat"></div></div>'+
+      '</div>'+
+      '<div class="grid2">'+
+        '<div class="box"><h4>🟢 Online now</h4>'+tbl(['User','Role','Since'],
+          (d.activeUsers||[]).map(u=>[esc(u.email),'<span class="role-pill">'+esc(u.role)+'</span>',esc(u.since)]))+'</div>'+
+        '<div class="box"><h4>🔑 Recent logins</h4>'+tbl(['Time','Email','Result'],
+          (d.recentLogins||[]).map(r=>[esc(r.time),esc(r.email),'<span class="badge '+(r.result==='Success'?'bg-Active':(r.result==='Locked'?'bg-Pending':'bg-Rejected'))+'">'+esc(r.result)+'</span>']))+'</div>'+
+      '</div>'+
+      '<div class="box"><h4>📜 Recent activity (audit)</h4>'+tbl(['Time','Actor','Action','Target'],
+        (d.recentAudit||[]).map(r=>[esc(r.time),esc(r.actor),'<span class="role-pill">'+esc(r.action)+'</span>',esc(r.target)]))+'</div>';
+    var br=d.byRole||[]; donut('ovRole',br.map(x=>x.name),br.map(x=>x.count),false);
+    var bs=d.byStatus||[]; donut('ovStat',bs.map(x=>x.name),bs.map(x=>x.count),false);
   }).catch(e=>$('ov').innerHTML=connBox(e));
-}
-function drawTrend(elId,trend){
-  trend=trend||[];
-  chart(elId,Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'area',height:300}),
-    stroke:{curve:'smooth',width:2}, fill:{type:'gradient',gradient:{opacityFrom:.4,opacityTo:.05}},
-    series:[{name:'Net Sales',data:trend.map(x=>Math.round(x.sales))},{name:'Gross Profit',data:trend.map(x=>Math.round(x.gp))}],
-    xaxis:{categories:trend.map(x=>x.date),labels:{style:{colors:'#9aa0b4'},rotate:-45,hideOverlappingLabels:true}},
-    yaxis:{labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}}}));
 }
 
 /* ---------- Sales Analytics (live) ---------- */
 function renderSales(){
-  setContent(pagehead('Sales Analytics','Revenue, profit and performance — live','sales')+'<div id="sa">'+loadingBox()+'</div>');
-  api({action:'getSales',token:tGet()}).then(d=>{
+  setContent(pagehead('Sales Analytics','Revenue, profit and performance — live','sales')+dateBar()+'<div id="sa">'+loadingBox()+'</div>');
+  dapi('getSales').then(d=>{
     if(!d.ok)return ($('sa').innerHTML=errBox(d));
     const k=d.kpis;
     $('sa').innerHTML=
@@ -544,19 +625,175 @@ function renderSales(){
         '<div class="chartbox"><h4>👗 Sales-girl performance</h4><div id="saGirls"></div></div>'+
       '</div>';
     drawTrend('saTrend',d.trend);
-    const tp=(d.topProducts||[]);
-    chart('saTop',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'bar',height:320}),
-      plotOptions:{bar:{horizontal:true,borderRadius:5,barHeight:'62%'}},
-      series:[{name:'Gross',data:tp.map(x=>Math.round(x.gross))}],
-      xaxis:{categories:tp.map(x=>x.name),labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}},
-      yaxis:{labels:{style:{colors:'#9aa0b4'}}}}));
-    const sg=(d.salesGirls||[]);
-    chart('saGirls',Object.assign({},CHART_BASE,{chart:Object.assign({},CHART_BASE.chart,{type:'bar',height:320}),
-      plotOptions:{bar:{borderRadius:6,columnWidth:'55%'}},colors:['#46b5ff'],
-      series:[{name:'Net Sales',data:sg.map(x=>Math.round(x.sales))}],
-      xaxis:{categories:sg.map(x=>x.name),labels:{style:{colors:'#9aa0b4'},rotate:-40}},
-      yaxis:{labels:{style:{colors:'#9aa0b4'},formatter:v=>inrS(v)}}}));
+    const tp=(d.topProducts||[]); hbar('saTop',tp.map(x=>x.name),tp.map(x=>Math.round(x.gross)),null,true);
+    const sg=(d.salesGirls||[]); hcColumn('saGirls',sg.map(x=>x.name),sg.map(x=>Math.round(x.sales)),'#46b5ff',true);
   }).catch(e=>$('sa').innerHTML=connBox(e));
+}
+
+/* ---------- shared chart/table helpers ---------- */
+function tbl(cols,rows){ var h='<div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>';
+  if(!rows.length)h+='<tr><td colspan="'+cols.length+'"><div class="empty">No data in this range</div></td></tr>';
+  rows.forEach(r=>{h+='<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>';}); return h+'</tbody></table></div>'; }
+
+/* ---------- Returns ---------- */
+function renderReturns(){
+  setContent(pagehead('Returns','Sale returns — quantity based','returns')+dateBar()+'<div id="rt">'+loadingBox()+'</div>');
+  dapi('getReturns').then(d=>{
+    if(!d.ok)return($('rt').innerHTML=errBox(d)); const k=d.kpis;
+    $('rt').innerHTML='<div class="cards">'+
+      statCard('Return Qty',Number(k.returnQty).toLocaleString('en-IN'))+
+      statCard('Return Lines',Number(k.returnLines).toLocaleString('en-IN'))+
+      statCard('Customers',Number(k.returnCustomers).toLocaleString('en-IN'))+
+    '</div>'+
+    '<div class="box"><p class="desc">⚠️ '+esc(d.note||'')+'</p></div>'+
+    '<div class="chartbox"><h4>📉 Return qty trend</h4><div id="rtTrend"></div></div>'+
+    '<div class="chartbox"><h4>🔁 Top returned items (qty)</h4><div id="rtItems"></div></div>';
+    var tr=d.trend||[]; hcArea('rtTrend',tr.map(x=>x.date),[{name:'Return Qty',data:tr.map(x=>x.qty),color:'#ff5d6c'}]);
+    var ti=d.topItems||[]; hbar('rtItems',ti.map(x=>x.name),ti.map(x=>x.qty),'#ffb547',false);
+  }).catch(e=>$('rt').innerHTML=connBox(e));
+}
+
+/* ---------- Purchase ---------- */
+function renderPurchase(){
+  setContent(pagehead('Purchase','Purchase value, vendors & items — live','purchase')+dateBar()+'<div id="pu">'+loadingBox()+'</div>');
+  dapi('getPurchase').then(d=>{
+    if(!d.ok)return($('pu').innerHTML=errBox(d)); const k=d.kpis;
+    $('pu').innerHTML='<div class="cards">'+
+      statCard('Purchase Value',inrS(k.purchaseValue),'incl. tax')+
+      statCard('Value (ex-tax)',inrS(k.purchaseValueWOT))+
+      statCard('Qty',Number(k.qty).toLocaleString('en-IN'))+
+      statCard('GST Paid',inrS(k.gst))+
+      statCard('Lines',Number(k.lines).toLocaleString('en-IN'))+
+      statCard('Return Qty',Number(k.returnQty).toLocaleString('en-IN'))+
+    '</div>'+
+    '<div class="chartbox"><h4>📈 Purchase trend</h4><div id="puTrend"></div></div>'+
+    '<div class="grid2">'+
+      '<div class="chartbox"><h4>🏭 Top vendors</h4><div id="puVend"></div></div>'+
+      '<div class="chartbox"><h4>📦 Top items purchased</h4><div id="puItems"></div></div>'+
+    '</div>';
+    var tr=d.trend||[]; hcArea('puTrend',tr.map(x=>x.date),[{name:'Purchase',data:tr.map(x=>Math.round(x.value)),color:'#46b5ff'}]);
+    var v=d.topVendors||[]; hbar('puVend',v.map(x=>x.name),v.map(x=>x.value),'#7c5cff',true);
+    var it=d.topItems||[]; hbar('puItems',it.map(x=>x.name),it.map(x=>x.value),'#37d399',true);
+  }).catch(e=>$('pu').innerHTML=connBox(e));
+}
+
+/* ---------- Customer CRM ---------- */
+function renderCRM(){
+  setContent(pagehead('Customer CRM','Customers, repeats & top spenders — live','crm')+dateBar()+'<div id="cr">'+loadingBox()+'</div>');
+  dapi('getCRM').then(d=>{
+    if(!d.ok)return($('cr').innerHTML=errBox(d)); const k=d.kpis;
+    $('cr').innerHTML='<div class="cards">'+
+      statCard('Total Customers',Number(k.totalCustomers).toLocaleString('en-IN'))+
+      statCard('Repeat Customers',Number(k.repeatCustomers).toLocaleString('en-IN'))+
+      statCard('Repeat Rate',k.repeatRate.toFixed(1)+'%')+
+      statCard('Avg Spend',inrS(k.avgSpend))+
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="chartbox"><h4>👑 Top customers (by spend)</h4><div id="crChart"></div></div>'+
+      '<div class="box"><h4>🧾 Customer purchase history</h4>'+tbl(['Customer','Bills','Spend'],
+        (d.topCustomers||[]).map(c=>[esc(c.name),Number(c.bills).toLocaleString('en-IN'),inr(c.sales)]))+'</div>'+
+    '</div>';
+    var tc=(d.topCustomers||[]).slice(0,10); hbar('crChart',tc.map(x=>x.name),tc.map(x=>x.sales),'#c9bdff',true);
+  }).catch(e=>$('cr').innerHTML=connBox(e));
+}
+
+/* ---------- Vendor ---------- */
+function renderVendor(){
+  setContent(pagehead('Vendor','Vendor ranking by purchase value — live','vendor')+dateBar()+'<div id="vn">'+loadingBox()+'</div>');
+  dapi('getVendor').then(d=>{
+    if(!d.ok)return($('vn').innerHTML=errBox(d)); const k=d.kpis;
+    $('vn').innerHTML='<div class="cards">'+
+      statCard('Vendors',Number(k.vendors).toLocaleString('en-IN'))+
+      statCard('Purchase Value',inrS(k.purchaseValue))+
+    '</div>'+
+    '<div class="chartbox"><h4>🏆 Vendor ranking</h4><div id="vnChart"></div></div>'+
+    '<div class="box"><h4>📋 Vendor detail</h4>'+tbl(['#','Vendor','Qty','Purchase Value'],
+      (d.ranking||[]).map((v,i)=>[(i+1),esc(v.name),Number(v.qty).toLocaleString('en-IN'),inr(v.value)]))+'</div>';
+    var r=(d.ranking||[]).slice(0,12); hbar('vnChart',r.map(x=>x.name),r.map(x=>x.value),'#7c5cff',true);
+  }).catch(e=>$('vn').innerHTML=connBox(e));
+}
+
+/* ---------- GST ---------- */
+function renderGST(){
+  setContent(pagehead('GST','GST collected, taxable revenue & rate split — live','gst')+dateBar()+'<div id="gs">'+loadingBox()+'</div>');
+  dapi('getGST').then(d=>{
+    if(!d.ok)return($('gs').innerHTML=errBox(d)); const k=d.kpis;
+    $('gs').innerHTML='<div class="cards">'+
+      statCard('GST Collected',inrS(k.gstCollected))+
+      statCard('Taxable Revenue',inrS(k.taxableRevenue))+
+      statCard('Total Revenue',inrS(k.totalRevenue))+
+      statCard('Effective Rate',k.effRate.toFixed(2)+'%')+
+    '</div>'+
+    '<div class="chartbox"><h4>📈 GST collected trend</h4><div id="gsTrend"></div></div>'+
+    '<div class="grid2">'+
+      '<div class="chartbox"><h4>🧮 GST by rate</h4><div id="gsRate"></div></div>'+
+      '<div class="box"><h4>📋 GST summary by rate</h4>'+tbl(['Rate','Taxable','GST'],
+        (d.byRate||[]).map(r=>[esc(r.rate),inr(r.taxable),inr(r.gst)]))+'</div>'+
+    '</div>';
+    var tr=d.trend||[]; hcArea('gsTrend',tr.map(x=>x.date),[{name:'GST',data:tr.map(x=>Math.round(x.gst)),color:'#37d399'}]);
+    var br=d.byRate||[]; donut('gsRate',br.map(x=>x.rate),br.map(x=>x.gst),true);
+  }).catch(e=>$('gs').innerHTML=connBox(e));
+}
+
+/* ---------- Expense ---------- */
+function renderExpense(){
+  setContent(pagehead('Expense','Recorded + unrecorded expenses — live','expense')+dateBar()+'<div id="ex">'+loadingBox()+'</div>');
+  dapi('getExpense').then(d=>{
+    if(!d.ok)return($('ex').innerHTML=errBox(d)); const k=d.kpis;
+    $('ex').innerHTML='<div class="cards">'+
+      statCard('Total Expense',inrS(k.total))+
+      statCard('Recorded',inrS(k.recorded))+
+      statCard('Unrecorded',inrS(k.unrecorded))+
+      statCard('Categories',Number(k.categories).toLocaleString('en-IN'))+
+    '</div>'+
+    '<div class="chartbox"><h4>📉 Expense trend</h4><div id="exTrend"></div></div>'+
+    '<div class="grid2">'+
+      '<div class="chartbox"><h4>💸 By category</h4><div id="exCat"></div></div>'+
+      '<div class="box"><h4>📋 Category breakdown</h4>'+tbl(['Category','Amount'],
+        (d.cats||[]).map(c=>[esc(c.name),inr(c.amount)]))+'</div>'+
+    '</div>';
+    var tr=d.trend||[]; hcColumn('exTrend',tr.map(x=>x.date),tr.map(x=>Math.round(x.amount)),'#ffb547',true);
+    var c=d.cats||[]; donut('exCat',c.map(x=>x.name),c.map(x=>x.amount),true);
+  }).catch(e=>$('ex').innerHTML=connBox(e));
+}
+
+/* ---------- Reports ---------- */
+let LAST_REPORT=null;
+function renderReports(){
+  setContent(pagehead('Reports','Consolidated summary — live','reports')+dateBar()+'<div id="rp">'+loadingBox()+'</div>');
+  dapi('getReports').then(d=>{
+    if(!d.ok)return($('rp').innerHTML=errBox(d)); LAST_REPORT=d; const s=d.summary;
+    $('rp').innerHTML='<div class="cards">'+
+      statCard('Revenue',inrS(s.revenue))+
+      statCard('Net Sales',inrS(s.netSales))+
+      statCard('Gross Profit',inrS(s.grossProfit),s.margin.toFixed(1)+'%')+
+      statCard('Net Profit',inrS(s.netProfit))+
+      statCard('Purchase',inrS(s.purchaseValue))+
+      statCard('Expense',inrS(s.expense))+
+      statCard('GST',inrS(s.gst))+
+      statCard('Orders',Number(s.orders).toLocaleString('en-IN'))+
+    '</div>'+
+    '<div class="box"><h4>📤 Export</h4><p class="desc" style="margin-bottom:12px">Download the consolidated report for '+(DATE_FROM||'all time')+(DATE_TO?' → '+DATE_TO:'')+'.</p>'+
+      '<button class="btn sm" onclick="exportReport()">⬇ Download CSV</button></div>'+
+    '<div class="grid2">'+
+      '<div class="box"><h4>🏆 Top products</h4>'+tbl(['Product','Qty','Sales'],(d.topProducts||[]).map(p=>[esc(p.name),Number(p.qty).toLocaleString('en-IN'),inr(p.sales)]))+'</div>'+
+      '<div class="box"><h4>👑 Top customers</h4>'+tbl(['Customer','Sales'],(d.topCustomers||[]).map(c=>[esc(c.name),inr(c.sales)]))+'</div>'+
+    '</div>';
+  }).catch(e=>$('rp').innerHTML=connBox(e));
+}
+function exportReport(){
+  if(!LAST_REPORT)return; const s=LAST_REPORT.summary; let csv='IKXARI ERP — Consolidated Report\n';
+  csv+='Range,'+(DATE_FROM||'All time')+' to '+(DATE_TO||'today')+'\n\nMetric,Value\n';
+  const map={'Revenue':s.revenue,'Net Sales':s.netSales,'Gross Profit':s.grossProfit,'Margin %':s.margin.toFixed(2),
+    'Net Profit':s.netProfit,'Purchase Value':s.purchaseValue,'Purchase Qty':s.purchaseQty,'Expense':s.expense,
+    'GST':s.gst,'Orders':s.orders,'Qty Sold':s.qtySold,'Avg Bill':Math.round(s.avgBill),'Return Qty':s.returnQty};
+  Object.keys(map).forEach(k=>csv+='"'+k+'",'+map[k]+'\n');
+  csv+='\nTop Products,Qty,Sales\n';(LAST_REPORT.topProducts||[]).forEach(p=>csv+='"'+p.name.replace(/"/g,'""')+'",'+p.qty+','+Math.round(p.sales)+'\n');
+  csv+='\nTop Customers,Sales\n';(LAST_REPORT.topCustomers||[]).forEach(c=>csv+='"'+c.name.replace(/"/g,'""')+'",'+Math.round(c.sales)+'\n');
+  csv+='\nBuilt by Somnath Karmakar\n';
+  const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='IKXARI_Report_'+(DATE_FROM||'all')+'.csv';a.click();URL.revokeObjectURL(url);
+  toast('Report downloaded','ok');
 }
 
 function errBox(d){ var m=(d&&d.error)||'Error';
