@@ -373,7 +373,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbxdy7VAExxaRBTIc0rlu8_P6W2vvjim_jvbqNpjQrdSUE_X_CMO3bYTJJ70sabnLfHi/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbxdy7VAExxaRBTIc0rlu8_P6W2vvjim_jvbqNpjQrdSUE_X_CMO3bYTJJ70sabnLfHi/exec";
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -494,7 +494,6 @@ const TABS=[
   {id:'system',   label:'System',          rank:5},
   {id:'settings', label:'Settings',        rank:1}
 ];
-/* role-based visibility: Accountant→Purchase Entry + Inventory, Sales Exec→Sales Entry */
 function canSee(id){
   if(ME.role==='Accountant')      return ['purchase_entry','inventory','settings'].indexOf(id)>=0;
   if(ME.role==='Sales Executive') return ['sales_entry','settings'].indexOf(id)>=0;
@@ -602,6 +601,7 @@ function inrS(n){ n=n||0; var a=Math.abs(n);
   if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+' L';
   if(a>=1e3) return '₹'+(n/1e3).toFixed(1)+'k';
   return '₹'+Math.round(n); }
+
 /* ---------- Highcharts 3D theme + helpers ---------- */
 const HC_COLORS=['#7c5cff','#46b5ff','#37d399','#ffb547','#ff5d6c','#c9bdff','#7ad0ff','#ff8fa3'];
 if(typeof Highcharts!=='undefined'){
@@ -655,7 +655,6 @@ function hcPie3D(elId,labels,data,money){
     series:[{name:'',data:pts}],
     tooltip:{formatter:function(){return '<b>'+this.point.name+'</b><br/>'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'))+' ('+this.percentage.toFixed(1)+'%)';}}});
 }
-/* Premium enterprise vertical bar — gradient, rounded top, value labels, rank (no toy 3D) */
 function hcBarV(elId,names,values,money){
   if(typeof Highcharts==='undefined')return; var el=hcEl(elId,360); if(!el)return;
   var cats=names.map(function(n,i){return '#'+(i+1)+'  '+n;});
@@ -674,7 +673,6 @@ function hcBarV(elId,names,values,money){
     tooltip:{useHTML:true,backgroundColor:'rgba(20,20,32,.96)',borderColor:'rgba(124,92,255,.4)',
       formatter:function(){return '<div style="font-family:Jost;padding:2px 4px"><b>'+this.key+'</b><br/><span style="font-size:15px;color:#c9bdff">'+(money?inr(this.y):Number(this.y).toLocaleString('en-IN'))+'</span></div>';}}});
 }
-/* 3D cylinder bars (premium, real — closest to a cylindrical 3D budget chart) */
 function hcCylinder(elId,names,values,money){
   if(typeof Highcharts==='undefined'||!Highcharts.seriesTypes.cylinder)return hcBarV(elId,names,values,money);
   var el=hcEl(elId,360); if(!el)return;
@@ -699,21 +697,16 @@ function pagehead(title,sub,tab){return '<div class="pagehead"><div><h3>'+esc(ti
 function loadingBox(){return '<div class="soon"><div class="ic">⏳</div><h3>Loading…</h3><p>Fetching live data from your sheet.</p></div>';}
 function noData(msg){return '<div class="soon"><div class="ic">📭</div><h3>No data</h3><p>'+esc(msg||'Nothing to show yet.')+'</p></div>';}
 
-/* ---------- Overview = Activity Monitor (Super Admin) ---------- */
+/* ---------- Overview ---------- */
 function renderOverview(){
   setContent(pagehead('Activity Monitor','Who\'s active, what changed, live system health','overview')+'<div id="ov">'+loadingBox()+'</div>');
   api({action:'getMonitor',token:tGet()}).then(d=>{
     if(!d.ok)return($('ov').innerHTML=errBox(d)); const c=d.counts;
     $('ov').innerHTML=
       '<div class="cards">'+
-        statCard('Total Users',c.users)+
-        statCard('Active',c.active)+
-        statCard('Pending',c.pending)+
-        statCard('Online Now',c.sessions)+
-        statCard('Logins Today',c.loginsToday)+
-        statCard('Failed Today',c.failToday)+
-        statCard('Audit Events',c.auditToday,'today')+
-        statCard('Disabled',c.disabled)+
+        statCard('Total Users',c.users)+statCard('Active',c.active)+statCard('Pending',c.pending)+
+        statCard('Online Now',c.sessions)+statCard('Logins Today',c.loginsToday)+
+        statCard('Failed Today',c.failToday)+statCard('Audit Events',c.auditToday,'today')+statCard('Disabled',c.disabled)+
       '</div>'+
       '<div class="grid2">'+
         '<div class="chartbox"><h4>👥 Users by role</h4><div id="ovRole"></div></div>'+
@@ -732,7 +725,7 @@ function renderOverview(){
   }).catch(e=>$('ov').innerHTML=connBox(e));
 }
 
-/* ---------- Sales Analytics (live) ---------- */
+/* ---------- Sales Analytics ---------- */
 function renderSales(){
   setContent(pagehead('Welcome, '+ME.fullName.split(' ')[0]+' 👋','Sales analytics — revenue, profit & performance','sales')+dateBar()+'<div id="sa">'+loadingBox()+'</div>');
   dapi('getSales').then(d=>{
@@ -740,14 +733,10 @@ function renderSales(){
     const k=d.kpis;
     $('sa').innerHTML=
       '<div class="cards">'+
-        statCard('Revenue',inrS(k.revenue),'In. GST')+
-        statCard('Gross Sale',inrS(k.grossSale),'Ex. GST')+
-        statCard('Gross Profit',inrS(k.grossProfit))+
-        statCard('Margin',k.margin.toFixed(1)+'%')+
-        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'),'meter = 1')+
-        statCard('Orders',Number(k.orders).toLocaleString('en-IN'))+
-        statCard('Avg Bill',inrS(k.abv))+
-        statCard('GST',inrS(k.gst))+
+        statCard('Revenue',inrS(k.revenue),'In. GST')+statCard('Gross Sale',inrS(k.grossSale),'Ex. GST')+
+        statCard('Gross Profit',inrS(k.grossProfit))+statCard('Margin',k.margin.toFixed(1)+'%')+
+        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'),'meter = 1')+statCard('Orders',Number(k.orders).toLocaleString('en-IN'))+
+        statCard('Avg Bill',inrS(k.abv))+statCard('GST',inrS(k.gst))+
       '</div>'+
       '<div class="chartbox"><h4>📈 Sales trend</h4><div id="saTrend"></div></div>'+
       '<div class="grid2">'+
@@ -760,7 +749,7 @@ function renderSales(){
   }).catch(e=>$('sa').innerHTML=connBox(e));
 }
 
-/* ---------- shared chart/table helpers ---------- */
+/* ---------- shared table helper ---------- */
 function tbl(cols,rows){ var h='<div class="tablewrap"><table><thead><tr>'+cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>';
   if(!rows.length)h+='<tr><td colspan="'+cols.length+'"><div class="empty">No data in this range</div></td></tr>';
   rows.forEach(r=>{h+='<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>';}); return h+'</tbody></table></div>'; }
@@ -789,12 +778,9 @@ function renderPurchase(){
   dapi('getPurchase').then(d=>{
     if(!d.ok)return($('pu').innerHTML=errBox(d)); const k=d.kpis;
     $('pu').innerHTML='<div class="cards">'+
-      statCard('Purchase Value',inrS(k.purchaseValue),'incl. tax')+
-      statCard('Value (ex-tax)',inrS(k.purchaseValueWOT))+
-      statCard('Qty',Number(k.qty).toLocaleString('en-IN'))+
-      statCard('GST Paid',inrS(k.gst))+
-      statCard('Lines',Number(k.lines).toLocaleString('en-IN'))+
-      statCard('Return Qty',Number(k.returnQty).toLocaleString('en-IN'))+
+      statCard('Purchase Value',inrS(k.purchaseValue),'incl. tax')+statCard('Value (ex-tax)',inrS(k.purchaseValueWOT))+
+      statCard('Qty',Number(k.qty).toLocaleString('en-IN'))+statCard('GST Paid',inrS(k.gst))+
+      statCard('Lines',Number(k.lines).toLocaleString('en-IN'))+statCard('Return Qty',Number(k.returnQty).toLocaleString('en-IN'))+
     '</div>'+
     '<div class="chartbox"><h4>📈 Purchase trend</h4><div id="puTrend"></div></div>'+
     '<div class="grid2">'+
@@ -807,7 +793,7 @@ function renderPurchase(){
   }).catch(e=>$('pu').innerHTML=connBox(e));
 }
 
-/* ---------- Customer CRM ---------- */
+/* ---------- CRM ---------- */
 function renderCRM(){
   setContent(pagehead('Customer CRM','Customers, repeats & top spenders — live','crm')+dateBar()+'<div id="cr">'+loadingBox()+'</div>');
   dapi('getCRM').then(d=>{
@@ -815,8 +801,7 @@ function renderCRM(){
     $('cr').innerHTML='<div class="cards">'+
       statCard('Total Customers',Number(k.totalCustomers).toLocaleString('en-IN'))+
       statCard('Repeat Customers',Number(k.repeatCustomers).toLocaleString('en-IN'))+
-      statCard('Repeat Rate',k.repeatRate.toFixed(1)+'%')+
-      statCard('Avg Spend',inrS(k.avgSpend))+
+      statCard('Repeat Rate',k.repeatRate.toFixed(1)+'%')+statCard('Avg Spend',inrS(k.avgSpend))+
     '</div>'+
     '<div class="chartbox"><h4>👑 Top customers by spend</h4><div id="crChart"></div></div>'+
     '<div class="box"><h4>🧾 Top 25 customers</h4>'+tbl(['#','Customer','Bills','Spend'],
@@ -862,10 +847,8 @@ function renderExpense(){
   dapi('getExpense').then(d=>{
     if(!d.ok)return($('ex').innerHTML=errBox(d)); const k=d.kpis;
     $('ex').innerHTML='<div class="cards">'+
-      statCard('Total Expense',inrS(k.total))+
-      statCard('Recorded',inrS(k.recorded))+
-      statCard('Unrecorded',inrS(k.unrecorded))+
-      statCard('Categories',Number(k.categories).toLocaleString('en-IN'))+
+      statCard('Total Expense',inrS(k.total))+statCard('Recorded',inrS(k.recorded))+
+      statCard('Unrecorded',inrS(k.unrecorded))+statCard('Categories',Number(k.categories).toLocaleString('en-IN'))+
     '</div>'+
     '<div class="chartbox"><h4>📉 Expense trend</h4><div id="exTrend"></div></div>'+
     '<div class="grid2">'+
@@ -885,14 +868,10 @@ function renderReports(){
   dapi('getReports').then(d=>{
     if(!d.ok)return($('rp').innerHTML=errBox(d)); LAST_REPORT=d; const s=d.summary;
     $('rp').innerHTML='<div class="cards">'+
-      statCard('Revenue',inrS(s.revenue))+
-      statCard('Net Sales',inrS(s.netSales))+
-      statCard('Gross Profit',inrS(s.grossProfit),s.margin.toFixed(1)+'%')+
-      statCard('Net Profit',inrS(s.netProfit))+
-      statCard('Purchase',inrS(s.purchaseValue))+
-      statCard('Expense',inrS(s.expense))+
-      statCard('GST',inrS(s.gst))+
-      statCard('Orders',Number(s.orders).toLocaleString('en-IN'))+
+      statCard('Revenue',inrS(s.revenue))+statCard('Net Sales',inrS(s.netSales))+
+      statCard('Gross Profit',inrS(s.grossProfit),s.margin.toFixed(1)+'%')+statCard('Net Profit',inrS(s.netProfit))+
+      statCard('Purchase',inrS(s.purchaseValue))+statCard('Expense',inrS(s.expense))+
+      statCard('GST',inrS(s.gst))+statCard('Orders',Number(s.orders).toLocaleString('en-IN'))+
     '</div>'+
     '<div class="box"><h4>📤 Export</h4><p class="desc" style="margin-bottom:12px">Download the consolidated report for '+(DATE_FROM||'all time')+(DATE_TO?' → '+DATE_TO:'')+'.</p>'+
       '<button class="btn sm" onclick="exportReport()">⬇ Download CSV</button></div>'+
@@ -929,13 +908,13 @@ function renderSoon(label){
     '<p>This module is part of an upcoming build phase. The data mapping is ready — the dashboard will plug in here next.</p></div>');
 }
 
-/* ---------- silent fetch (for 60s auto-refresh, no loader flash) ---------- */
+/* ---------- silent fetch ---------- */
 function apiS(p){
   if(API.indexOf('PASTE_')===0)return Promise.reject(new Error('Backend URL not set.'));
   return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(r=>r.json());
 }
 
-/* ---------- Purchase Entry (Accountant / Admin / Super Admin) ---------- */
+/* ---------- Purchase Entry ---------- */
 let PCART=[], PFEED=[];
 function renderPurchaseEntry(){
   PCART=[];
@@ -983,7 +962,6 @@ function submitPurchaseBatch(){
 function loadPurchaseFeed(silent){
   (silent?apiS:api)({action:'purchaseFeed',token:tGet()}).then(d=>{
     if(!d||!d.ok)return; PFEED=d.feed||[];
-    // group by invoice
     const groups={}; PFEED.forEach(r=>{(groups[r.invoice]=groups[r.invoice]||[]).push(r);});
     let h='';
     Object.keys(groups).forEach(inv=>{
@@ -1010,6 +988,42 @@ function editPLine(id){
     '<div class="field"><label>Qty</label><input id="ep-qty" type="number" min="1" value="'+r.qty+'"></div></div>'+
     '<div class="field"><label>Selling price</label><input id="ep-sell" type="number" value="'+r.sell+'"></div>'+
     '<button class="btn" onclick="savePLine(\''+id+'\')">Save changes</button>');
+}
+/* ============================================================
+   FIX 1: CLOSING BRACE FOR editPLine ADDED HERE ↓
+   (was missing — caused all POS functions to be nested inside
+   editPLine and therefore unreachable from openTab)
+   ============================================================ */
+
+function savePLine(id){
+  closeForm();
+  api({action:'editPurchase',token:tGet(),id:id,dist:val('ep-dist'),item:val('ep-item'),
+       cost:val('ep-cost'),qty:val('ep-qty'),sell:val('ep-sell')}).then(d=>{
+    toast(d.ok?d.msg:d.error,d.ok?'ok':'err'); if(d.ok)loadPurchaseFeed();
+  }).catch(e=>toast(e.message,'err'));
+}
+function delPLine(id){
+  modalConfirm({icon:'🗑️',title:'Delete line',message:'Remove this purchase line?',danger:true,confirmText:'Delete',
+    onConfirm:()=>api({action:'deletePurchase',token:tGet(),id:id}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok)loadPurchaseFeed();}).catch(e=>toast(e.message,'err'))});
+}
+function delPInvoice(inv){
+  modalConfirm({icon:'🗑️',title:'Delete invoice',message:'Delete entire invoice '+inv+'?',danger:true,confirmText:'Delete all',
+    onConfirm:()=>api({action:'deletePurchaseInvoice',token:tGet(),invoice:inv}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok)loadPurchaseFeed();}).catch(e=>toast(e.message,'err'))});
+}
+function loadStockMini(silent){
+  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
+    if(!d||!d.ok)return;
+    const el=$('pe-stockmini'); if(!el)return;
+    const low=(d.inventory||[]).filter(x=>x.current<=2);
+    el.innerHTML='<div class="cards">'+
+      statCard('Items',d.kpis.items)+statCard('Units',d.kpis.units)+
+      statCard('Value',inrS(d.kpis.stockValue))+statCard('Low stock',d.kpis.low,'≤2')+
+    '</div>'+
+    (low.length?'<div class="box" style="margin-bottom:0"><h4>⚠️ Low stock alert</h4>'+
+      tbl(['Item','Current','Sell'],low.map(x=>[esc(x.item),'<b style="color:#ffce85">'+x.current+'</b>',inr(x.sell)]))+'</div>':'');
+  }).catch(()=>{});
+}
+
 /* ========== UNRECORDED SALES — POS workspace ========== */
 let POS_TYPE='', POS_CART=[], POS_STOCK=[], POS_FEED=[];
 function renderSalesEntry(){
@@ -1079,7 +1093,6 @@ function renderWorkspace(){
   renderCart(); posBill();
   if(POS_TYPE==='Cash') posLoadProducts();
 }
-/* ----- products (cash) ----- */
 function posLoadProducts(){
   apiS({action:'stockList',token:tGet()}).then(d=>{ if(d&&d.ok){POS_STOCK=d.inStock||[];} posRenderProducts(); }).catch(()=>{});
 }
@@ -1135,7 +1148,6 @@ function renderCart(){
     '<button class="btn ghost sm" onclick="posSave(\'draft\')">Save draft</button>'+
     '<button class="btn ghost sm" onclick="posPrintCurrent()">🖨️ Print</button></div>';
 }
-/* ----- live bill ----- */
 function posTotals(){ let sub=0; POS_CART.forEach(c=>sub+=c.qty*c.price); return sub; }
 function posBill(){
   const total=posTotals();
@@ -1154,7 +1166,6 @@ function posBill(){
     (custom?'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px"><span class="desc">Advance</span><span>'+inr(adv)+'</span></div><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:#ffce85"><span>Balance due</span><span>'+inr(bal)+'</span></div>':'')+
     '</div>';
 }
-/* ----- save ----- */
 function posSave(status){
   if(!POS_TYPE)return toast('Choose sale type first','err');
   if(!POS_CART.length)return toast('Cart is empty','err');
@@ -1193,7 +1204,6 @@ function printOrderBill(o){
     '<div style="text-align:center;color:#666;font-size:11px;margin-top:12px">Thank you for shopping with Ikxari</div></body></html>');
   w.document.close(); setTimeout(()=>w.print(),400);
 }
-/* ----- KPIs + reminders ----- */
 function posLoadStats(silent){
   (silent?apiS:api)({action:'ordersStats',token:tGet()}).then(d=>{
     if(!d||!d.ok)return; const k=d.kpis;
@@ -1208,7 +1218,6 @@ function posLoadStats(silent){
     if($('pos-rem'))$('pos-rem').innerHTML=rem;
   }).catch(()=>{});
 }
-/* ----- recent orders ----- */
 const DSTEPS=['Order Received','In Production','Quality Check','Ready For Dispatch','Delivered'];
 function posLoadFeed(silent){
   (silent?apiS:api)({action:'ordersFeed',token:tGet()}).then(d=>{ if(!d||!d.ok)return; POS_FEED=d.feed||[]; posRenderFeed(); }).catch(()=>{});
@@ -1254,32 +1263,12 @@ function posDelete(id){
 }
 function posPrintFeed(id){ const o=POS_FEED.find(x=>x.id===id); if(o)printOrderBill({invoice:o.invoice,date:o.date,customer:o.customer,type:o.type,items:o.items,total:o.total,advance:o.advance,balance:o.balance,deliveryDate:o.deliveryDate}); }
 
-  if(vals.length>=2){
-    const last=vals[vals.length-1], prev=vals[vals.length-2];
-    let txt='', col='';
-    if(prev>0){ const p=((last-prev)/prev*100); col=p>=0?'#7fe9c0':'#ff97a2'; txt=(p>=0?'▲ ':'▼ ')+Math.abs(p).toFixed(1)+'% vs previous day'; }
-    else { col='#7fe9c0'; txt='▲ new sales'; }
-    const g=$('se-growth'); if(g){ g.textContent=txt; g.style.color=col; }
-  }
-}
-function delSLine(id){
-  modalConfirm({icon:'🗑️',title:'Delete sale',message:'Delete this sale line? If it is a live sale, stock will be restored.',danger:true,confirmText:'Delete',
-    onConfirm:()=>api({action:'deleteSale',token:tGet(),id:id}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){loadSalesFeed();loadInStock();}}).catch(e=>toast(e.message,'err'))});
-}
-function editSLine(id,qty,price){
-  fmForm('Edit sale (within 6h) — '+id,
-    '<div class="row2"><div class="field"><label>Qty</label><input id="es-qty" type="number" min="1" value="'+qty+'"></div>'+
-    '<div class="field"><label>Selling price</label><input id="es-price" type="number" value="'+price+'"></div></div>'+
-    '<button class="btn" onclick="saveSLine(\''+id+'\')">Save changes</button>');
-}
-function saveSLine(id){
-  closeForm();
-  api({action:'editSale',token:tGet(),id:id,qty:val('es-qty'),sell:val('es-price')}).then(d=>{
-    toast(d.ok?d.msg:d.error,d.ok?'ok':'err'); if(d.ok){loadSalesFeed();loadInStock();}
-  }).catch(e=>toast(e.message,'err'));
-}
+/* ============================================================
+   FIX 2: ORPHAN vals BLOCK REMOVED (was top-level, caused
+   ReferenceError on load: vals is not defined)
+   ============================================================ */
 
-/* ---------- Inventory (live closing stock) ---------- */
+/* ---------- Inventory ---------- */
 function renderInventory(){
   setContent(pagehead('Inventory','Live closing stock = purchased − sold (auto, every 60s)','inventory')+'<div id="iv">'+loadingBox()+'</div>');
   loadInventory(); startAutoRefresh(()=>loadInventory(true));
@@ -1298,8 +1287,7 @@ function loadInventory(silent){
   }).catch(e=>{ if(!silent)$('iv').innerHTML=connBox(e); });
 }
 
-
-/* ---------- Item Analysis (item-wise + date-wise, 3D) ---------- */
+/* ---------- Item Analysis ---------- */
 let IA_FROM='', IA_TO='', IA_ALL=[], IA_SEL=new Set(), IA_LAST=null;
 function renderItemAnalysis(){
   IA_FROM=''; IA_TO=''; IA_SEL=new Set();
@@ -1385,6 +1373,8 @@ function drawIA3D(dates,series){
     series:hs
   });
 }
+
+/* ---------- User Management ---------- */
 let USERS=[],ROLES_AVAIL=['Sales Executive','Accountant','Manager'];
 function renderUsers(){
   setContent('<div id="um"></div>');
@@ -1411,7 +1401,6 @@ function paintUsers(filter){
        '<input id="um-search" placeholder="Search name, email, role…" oninput="paintUsers(this.value)" value="'+esc(filter||'')+'">'+
        '<button class="btn sm" onclick="openCreate()">+ Create user</button>'+
      '</div>';
-  // pending block
   if(pending.length){
     h+='<div class="sectiontitle">Pending approvals<span class="pendcount">'+pending.length+'</span></div>';
     h+='<div class="tablewrap"><table><thead><tr><th>Name</th><th>Email</th><th>Requested</th><th>Verified</th><th>Action</th></tr></thead><tbody>';
@@ -1423,7 +1412,6 @@ function paintUsers(filter){
     });
     h+='</tbody></table></div><div style="height:18px"></div>';
   }
-  // all users
   h+='<div class="sectiontitle">All users ('+USERS.length+')</div>';
   h+='<div class="tablewrap"><table><thead><tr><th>Name</th><th>Email</th><th>Dept</th><th>Role</th><th>Status</th><th>Last login</th><th>Actions</th></tr></thead><tbody>';
   if(!rows.length){h+='<tr><td colspan="7"><div class="empty">No users found</div></td></tr>';}
@@ -1431,8 +1419,7 @@ function paintUsers(filter){
     const isSuper=u.role==='Super Admin', isMe=u.email===ME.email;
     h+='<tr>'+
       '<td>'+esc(u.fullName)+(isMe?' <span style="color:#6b7184;font-size:11px">(you)</span>':'')+'</td>'+
-      '<td>'+esc(u.email)+'</td>'+
-      '<td>'+esc(u.department||'—')+'</td>'+
+      '<td>'+esc(u.email)+'</td><td>'+esc(u.department||'—')+'</td>'+
       '<td><span class="role-pill">'+esc(u.role)+'</span></td>'+
       '<td><span class="badge bg-'+esc(u.status)+'">'+esc(u.status)+'</span></td>'+
       '<td style="color:var(--muted)">'+esc(u.lastLogin||'—')+'</td>'+
@@ -1537,8 +1524,7 @@ function renderAudit(){
   }).catch(e=>toast(e.message,'err'));
 }
 
-/* ---------- Settings ---------- */
-/* ---------- System (Super Admin): maintenance + notices ---------- */
+/* ---------- System ---------- */
 function renderSystem(){
   setContent(pagehead('System','Maintenance mode & broadcast notices','system')+'<div id="sy">'+loadingBox()+'</div>');
   api({action:'getConfig',token:tGet()}).then(d=>{
@@ -1590,6 +1576,7 @@ function applyMaint(page,on){
   }).catch(e=>toast(e.message,'err'));
 }
 
+/* ---------- Settings ---------- */
 function renderSettings(){
   setContent(
     '<div class="box"><h4>👤 Profile</h4>'+
