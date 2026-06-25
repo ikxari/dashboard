@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Ikxari - Beyond Fashion</title>
+<title>Ikxari — Beyond Fashion</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237c5cff'/%3E%3Cstop offset='1' stop-color='%2346b5ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='18' r='5' fill='white'/%3E%3Crect x='27' y='27' width='10' height='22' rx='5' fill='white'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#7c5cff">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -91,7 +93,12 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
   display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12.5px}
 .uchip .un{font-size:13px;font-weight:500;line-height:1.1}
 .uchip .ur{font-size:10.5px;color:var(--muted)}
-.nav{display:flex;gap:8px;padding:12px 18px;overflow-x:auto;justify-content:safe center}
+.nav{display:flex;gap:8px;padding:12px 18px;overflow-x:auto;justify-content:safe center;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.tablewrap{max-height:460px;overflow:auto}
+.tablewrap::-webkit-scrollbar{width:8px;height:8px}
+.tablewrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}
+.tablewrap::-webkit-scrollbar-track{background:transparent}
 .nav::-webkit-scrollbar{display:none}
 .nav button{flex-shrink:0;padding:9px 16px;border-radius:30px;border:1px solid var(--brd);background:var(--inp);
   color:var(--muted);font-family:'Jost';font-size:13.5px;font-weight:500;cursor:pointer;transition:.2s;white-space:nowrap}
@@ -222,6 +229,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .segwrap{display:inline-flex;gap:4px;background:var(--inp);border:1px solid var(--brd);border-radius:30px;padding:4px;margin-bottom:18px}
 .seg{padding:8px 22px;border-radius:24px;border:none;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit}
 .seg.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.ia-allrow{display:flex;align-items:center;gap:8px;font-size:14px;padding:8px 10px;border:1px solid var(--brd);border-radius:10px;background:var(--inp);cursor:pointer}
+.ia-item{display:flex;align-items:center;gap:8px;font-size:13.5px;padding:8px 10px;border-radius:8px;cursor:pointer}
+.ia-item:hover{background:rgba(255,255,255,.04)}
+.ia-item input,.ia-allrow input{width:16px;height:16px;accent-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -231,7 +242,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div class="authWrap" id="authView">
   <div class="shell">
     <div class="brand">
-      <div class="logo"><div class="dot">SP</div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion</div></div></div>
+      <div class="logo"><div class="dot"><svg width="20" height="20" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="17" r="6.5" fill="white"/><rect x="25.5" y="27" width="13" height="23" rx="6.5" fill="white"/></svg></div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion</div></div></div>
       <div class="hero">Enterprise retail intelligence, in one place.</div>
       <div class="sub">Sales, inventory, GST, CRM and vendor analytics — secured with role-based access.</div>
       <div class="feat"><div class="fi">📊</div> Live sales &amp; gross-profit dashboards</div>
@@ -307,7 +318,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div class="app" id="appView">
   <div class="apphead">
     <div class="topbar">
-      <div class="logo"><div class="dot">SP</div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion</div></div></div>
+      <div class="logo"><div class="dot"><svg width="20" height="20" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="17" r="6.5" fill="white"/><rect x="25.5" y="27" width="13" height="23" rx="6.5" fill="white"/></svg></div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion</div></div></div>
       <div class="uchip"><div class="av" id="u-av">S</div><div><div class="un" id="u-name">User</div><div class="ur" id="u-role">Role</div></div></div>
       <button class="btn ghost sm" onclick="doLogout()">Sign Out</button>
     </div>
@@ -338,7 +349,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbzwf_IOiD-bug67To2bjI_mKh0GFBbgbqYqrEYy1_jUiEEPITiZSL2CNJvNMVT2fGlV/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbykatFBTsNUasOKFUfONqbu4mxi6WAxnngjL4EBUdLx0koDfjSwQ4PBvfNgu9CYqZg5/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -441,10 +452,11 @@ let ME=null;
 const TABS=[
   {id:'overview', label:'Overview',        rank:5},
   {id:'sales',    label:'Sales Analytics', rank:1},
-  {id:'returns',  label:'Returns',         rank:1},
-  {id:'purchase_entry', label:'Unregister Purchase', rank:4},
-  {id:'sales_entry',    label:'Unregister Sales',    rank:4},
+  {id:'returns',  label:'Sales Return',     rank:1},
+  {id:'purchase_entry', label:'Unrecorded Purchase', rank:4},
+  {id:'sales_entry',    label:'Unrecorded Sales',    rank:4},
   {id:'inventory',label:'Inventory',       rank:1},
+  {id:'itemanalysis', label:'Item Analysis', rank:4},
   {id:'ims',      label:'IMS Center',      rank:1, soon:true},
   {id:'purchase', label:'Purchase',        rank:1},
   {id:'crm',      label:'Customer CRM',    rank:1},
@@ -511,6 +523,7 @@ function openTab(id){
   if(id==='purchase_entry')return renderPurchaseEntry();
   if(id==='sales_entry')return renderSalesEntry();
   if(id==='inventory')return renderInventory();
+  if(id==='itemanalysis')return renderItemAnalysis();
   if(id==='purchase')return renderPurchase();
   if(id==='crm')return renderCRM();
   if(id==='vendor')return renderVendor();
@@ -530,6 +543,7 @@ function setContent(html){$('content').innerHTML='<div class="page show">'+html+
 
 /* ---------- date filter ---------- */
 let DATE_FROM='', DATE_TO='', FORCE_FRESH=false;
+function iso(d){ return d.toISOString().slice(0,10); }
 function dp(){ return {from:DATE_FROM, to:DATE_TO}; }
 function dapi(action){ var f=FORCE_FRESH; FORCE_FRESH=false; return api({action:action,token:tGet(),from:DATE_FROM,to:DATE_TO,fresh:f}); }
 function refreshTab(){ FORCE_FRESH=true; openTab(CUR); }
@@ -702,18 +716,18 @@ function renderSales(){
     const k=d.kpis;
     $('sa').innerHTML=
       '<div class="cards">'+
-        statCard('Revenue',inrS(k.revenue))+
-        statCard('Net Sales',inrS(k.netSales))+
+        statCard('Revenue',inrS(k.revenue),'In. GST')+
+        statCard('Gross Sale',inrS(k.grossSale),'Ex. GST')+
         statCard('Gross Profit',inrS(k.grossProfit))+
         statCard('Margin',k.margin.toFixed(1)+'%')+
-        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'))+
+        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'),'meter = 1')+
         statCard('Orders',Number(k.orders).toLocaleString('en-IN'))+
         statCard('Avg Bill',inrS(k.abv))+
         statCard('GST',inrS(k.gst))+
       '</div>'+
       '<div class="chartbox"><h4>📈 Sales trend</h4><div id="saTrend"></div></div>'+
       '<div class="grid2">'+
-        '<div class="chartbox"><h4>🏆 Top products (by gross)</h4><div id="saTop"></div></div>'+
+        '<div class="chartbox"><h4>🏆 Top products (by gross sale)</h4><div id="saTop"></div></div>'+
         '<div class="chartbox"><h4>👗 Sales-girl performance</h4><div id="saGirls"></div></div>'+
       '</div>';
     drawTrend('saTrend',d.trend);
@@ -729,7 +743,7 @@ function tbl(cols,rows){ var h='<div class="tablewrap"><table><thead><tr>'+cols.
 
 /* ---------- Returns ---------- */
 function renderReturns(){
-  setContent(pagehead('Returns','Sale returns — quantity based','returns')+dateBar()+'<div id="rt">'+loadingBox()+'</div>');
+  setContent(pagehead('Sales Return','Returns from Master Sale-Returns','returns')+dateBar()+'<div id="rt">'+loadingBox()+'</div>');
   dapi('getReturns').then(d=>{
     if(!d.ok)return($('rt').innerHTML=errBox(d)); const k=d.kpis;
     $('rt').innerHTML='<div class="cards">'+
@@ -901,7 +915,7 @@ function apiS(p){
 let PCART=[], PFEED=[];
 function renderPurchaseEntry(){
   PCART=[];
-  setContent(pagehead('Unregister Purchase','Add many items in one go, then push to stock','purchase_entry')+
+  setContent(pagehead('Unrecorded Purchase','Add many items in one go, then push to stock','purchase_entry')+
     '<div class="formwrap"><div class="box"><h4>➕ Add items to purchase</h4>'+
       '<div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
       '<div class="field"><label>Item name</label><input id="pe-item" placeholder="e.g. HAND CLUTCH MRP2350"></div>'+
@@ -999,7 +1013,7 @@ function loadStockMini(silent){
 let SCART=[], IN_STOCK=[], SFEED=[], SALE_SEG='sale';
 function renderSalesEntry(){
   SCART=[]; SALE_SEG='sale';
-  setContent(pagehead('Unregister Sales','Sell, return, and track daily sales','sales_entry')+
+  setContent(pagehead('Unrecorded Sales','Sell, return, and track daily sales','sales_entry')+
     '<div class="segwrap"><button id="seg-sale" class="seg active" onclick="saleSeg(\'sale\')">Sale</button>'+
       '<button id="seg-ret" class="seg" onclick="saleSeg(\'return\')">Sale Return</button></div>'+
     '<div id="seg-sale-body">'+
@@ -1014,11 +1028,12 @@ function renderSalesEntry(){
     '</div>'+
     '<div id="seg-return-body" style="display:none">'+
       '<div class="formwrap"><div class="box"><h4>↩️ Sale return</h4>'+
-        '<div class="row2"><div class="field"><label>Sale invoice no.</label><input id="sr-inv" placeholder="INV-0001"></div>'+
-        '<div class="field"><label>Item</label><input id="sr-item" placeholder="item name"></div></div>'+
-        '<div class="row2"><div class="field"><label>Return qty</label><input id="sr-qty" type="number" min="1" value="1"></div>'+
-        '<div class="field"><label>&nbsp;</label><button class="btn" id="sr-btn" onclick="submitReturn()">Process return</button></div></div>'+
-        '<p class="desc">Returns add stock back. From a recent sale, tap "Return" to auto-fill this.</p>'+
+        '<div class="field"><label>Sale invoice no.</label><input id="sr-inv" placeholder="INV-0001" oninput="srLookup()"></div>'+
+        '<div id="sr-lookup" class="desc" style="margin:-2px 0 12px">Enter a sale invoice to see its items.</div>'+
+        '<div class="row2"><div class="field"><label>Item</label><input id="sr-item" placeholder="item name"></div>'+
+        '<div class="field"><label>Return qty</label><input id="sr-qty" type="number" min="1" value="1"></div></div>'+
+        '<button class="btn" id="sr-btn" onclick="submitReturn()">Process return</button>'+
+        '<p class="desc" style="margin-top:8px">Returns add stock back. Tap an item below to auto-fill.</p>'+
       '</div></div>'+
       '<div class="box"><h4>↩️ Recent returns</h4><div id="sr-feed">'+loadingBox()+'</div></div>'+
     '</div>');
@@ -1123,7 +1138,24 @@ function submitReturn(){
     toast(d.msg,'ok'); loadSalesFeed(); loadInStock();
   }).catch(e=>{btnBusy('sr-btn',false,'Process return');toast(e.message,'err');});
 }
-function returnFrom(inv,item){ saleSeg('return'); $('sr-inv').value=inv; $('sr-item').value=item; toast('Return form filled','ok'); }
+function returnFrom(inv,item){ saleSeg('return'); $('sr-inv').value=inv; $('sr-item').value=item; srLookup(); toast('Return form filled','ok'); }
+function srLookup(){
+  if(!$('sr-lookup'))return;
+  const inv=(val('sr-inv')||'').trim(); if(!inv){ $('sr-lookup').textContent='Enter a sale invoice to see its items.'; return; }
+  const sold={}, ret={};
+  SFEED.forEach(r=>{
+    if(r.kind==='Sale' && r.invoice===inv){ sold[r.item]=(sold[r.item]||0)+r.qty; }
+    if(r.kind==='Return' && r.ref===inv){ ret[r.item]=(ret[r.item]||0)+r.qty; }
+  });
+  const items=Object.keys(sold);
+  if(!items.length){ $('sr-lookup').innerHTML='<span style="color:#ffb3bb">No sale found for '+esc(inv)+'.</span>'; return; }
+  $('sr-lookup').innerHTML='<div style="margin-top:6px">'+items.map(it=>{
+    const left=sold[it]-(ret[it]||0);
+    return '<div class="mt-row"><div class="nm">'+esc(it)+' <span class="desc">· sold '+sold[it]+(ret[it]?(' · returned '+ret[it]):'')+' · <b style="color:'+(left>0?'#7fe9c0':'#ff97a2')+'">'+left+' returnable</b></span></div>'+
+      (left>0?'<button class="icbtn ok" onclick="fillReturn(\''+esc(it).replace(/\x27/g,"\\\x27")+'\','+left+')">Return this</button>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function fillReturn(item,max){ $('sr-item').value=item; $('sr-qty').value=Math.min(1,max)||1; $('sr-qty').max=max; toast('Filled — set qty up to '+max,'ok'); }
 function loadSalesFeed(silent){
   (silent?apiS:api)({action:'salesFeed',token:tGet()}).then(d=>{
     if(!d||!d.ok)return; SFEED=d.feed||[];
@@ -1197,7 +1229,92 @@ function loadInventory(silent){
 }
 
 
-/* ---------- User Management ---------- */
+/* ---------- Item Analysis (item-wise + date-wise, 3D) ---------- */
+let IA_FROM='', IA_TO='', IA_ALL=[], IA_SEL=new Set(), IA_LAST=null;
+function renderItemAnalysis(){
+  IA_FROM=''; IA_TO=''; IA_SEL=new Set();
+  setContent(pagehead('Item Analysis','Item-wise & date-wise sales — search, filter, compare','itemanalysis')+
+    '<div class="box"><h4>📅 Date range</h4>'+
+      '<div class="chips">'+
+        '<button class="chip" onclick="iaQuick(\'today\')">Today</button>'+
+        '<button class="chip" onclick="iaQuick(\'yest\')">Yesterday</button>'+
+        '<button class="chip" onclick="iaQuick(\'7\')">Last 7 days</button>'+
+        '<button class="chip" onclick="iaQuick(\'30\')">Last 30 days</button>'+
+        '<button class="chip" onclick="iaQuick(\'tm\')">This month</button>'+
+        '<button class="chip" onclick="iaQuick(\'lm\')">Last month</button>'+
+        '<button class="chip" onclick="iaQuick(\'all\')">All time</button>'+
+      '</div>'+
+      '<div class="row2" style="margin-top:10px"><div class="field"><label>From</label><input type="date" id="ia-df" onchange="iaApply()"></div>'+
+      '<div class="field"><label>To</label><input type="date" id="ia-dt" onchange="iaApply()"></div></div>'+
+      '<div id="ia-range" class="desc"></div>'+
+    '</div>'+
+    '<div class="grid2"><div class="box"><h4>🔎 Items</h4>'+
+      '<input id="ia-search" placeholder="search item (partial ok)…" oninput="iaRenderList()" style="margin-bottom:10px">'+
+      '<label class="ia-allrow"><input type="checkbox" id="ia-all" onchange="iaToggleAll(this.checked)"> <b>Select all</b> <span id="ia-cnt" class="desc"></span></label>'+
+      '<div id="ia-list" style="max-height:280px;overflow:auto;margin-top:8px">'+loadingBox()+'</div>'+
+    '</div>'+
+    '<div class="box"><h4>📊 Summary</h4><div id="ia-kpi">'+loadingBox()+'</div>'+
+      '<p class="desc" style="margin-top:10px">No item selected = all items combined. Select one or many to compare.</p></div></div>'+
+    '<div class="chartbox"><h4>🧊 Date-wise sales (3D)</h4><div id="ia-chart">'+loadingBox()+'</div></div>');
+  loadIA();
+}
+function iaQuick(r){
+  const t=new Date();
+  if(r==='all'){IA_FROM='';IA_TO='';}
+  else if(r==='today'){IA_FROM=iso(t);IA_TO=iso(t);}
+  else if(r==='yest'){const y=new Date(t);y.setDate(y.getDate()-1);IA_FROM=iso(y);IA_TO=iso(y);}
+  else if(r==='tm'){IA_FROM=iso(new Date(t.getFullYear(),t.getMonth(),1));IA_TO=iso(t);}
+  else if(r==='lm'){IA_FROM=iso(new Date(t.getFullYear(),t.getMonth()-1,1));IA_TO=iso(new Date(t.getFullYear(),t.getMonth(),0));}
+  else{const n=parseInt(r,10);const f=new Date(t);f.setDate(f.getDate()-n+1);IA_FROM=iso(f);IA_TO=iso(t);}
+  if($('ia-df'))$('ia-df').value=IA_FROM; if($('ia-dt'))$('ia-dt').value=IA_TO;
+  loadIA();
+}
+function iaApply(){ IA_FROM=$('ia-df').value||''; IA_TO=$('ia-dt').value||''; loadIA(); }
+function iaToggleAll(on){ if(on){ IA_ALL.forEach(i=>IA_SEL.add(i)); } else { IA_SEL.clear(); } iaRenderList(); loadIA(); }
+function iaToggleItem(name,on){ if(on)IA_SEL.add(name); else IA_SEL.delete(name); iaCnt(); loadIA(); }
+function iaCnt(){ if($('ia-cnt'))$('ia-cnt').textContent=IA_SEL.size?('· '+IA_SEL.size+' selected'):'· all items'; }
+function iaRenderList(){
+  if(!$('ia-list'))return;
+  const q=(val('ia-search')||'').toLowerCase();
+  const list=IA_ALL.filter(i=>i.toLowerCase().indexOf(q)>=0);
+  $('ia-list').innerHTML=list.length? list.map(i=>
+    '<label class="ia-item"><input type="checkbox" '+(IA_SEL.has(i)?'checked':'')+' onchange="iaToggleItem(\''+esc(i).replace(/'/g,"\\'")+'\',this.checked)"> '+esc(i)+'</label>').join('')
+    : '<p class="desc">No matching item.</p>';
+  if($('ia-all'))$('ia-all').checked=(IA_ALL.length>0 && IA_SEL.size===IA_ALL.length);
+  iaCnt();
+}
+function loadIA(){
+  $('ia-range') && ($('ia-range').textContent = (IA_FROM||IA_TO)?('Showing '+(IA_FROM||'start')+' → '+(IA_TO||'today')):'Showing all dates');
+  api({action:'salesAnalytics',token:tGet(),items:Array.from(IA_SEL),from:IA_FROM,to:IA_TO}).then(d=>{
+    if(!d||!d.ok)return($('ia-kpi').innerHTML=errBox(d));
+    if(!IA_ALL.length || IA_ALL.length!==d.allItems.length){ IA_ALL=d.allItems; iaRenderList(); }
+    const t=d.totals;
+    $('ia-kpi').innerHTML='<div class="cards" style="grid-template-columns:1fr 1fr">'+
+      statCard('Total Sales',inrS(t.sales))+statCard('Qty Sold',Number(t.qty).toLocaleString('en-IN'))+
+      statCard('Orders',Number(t.orders).toLocaleString('en-IN'))+statCard('Avg / Day',inrS(t.avgDaily))+'</div>';
+    drawIA3D(d.dates,d.series);
+  }).catch(e=>{$('ia-kpi').innerHTML=connBox(e);});
+}
+function drawIA3D(dates,series){
+  if(!$('ia-chart'))return;
+  if(!dates.length){ $('ia-chart').innerHTML='<p class="desc">No sales in this selection / date range.</p>'; return; }
+  const palette=['#7c5cff','#46b5ff','#37d399','#ffb347','#ff6f91','#b388ff','#00d4c7','#ff5d6c'];
+  const hs=series.map((s,i)=>({name:s.name,
+    data:s.points.map(p=>({y:p.amount,qty:p.qty,orders:p.orders})),
+    color:palette[i%palette.length]}));
+  Highcharts.chart($('ia-chart'),{
+    chart:{type:'column',options3d:{enabled:true,alpha:12,beta:14,depth:60,viewDistance:30},zoomType:'xy',backgroundColor:'transparent'},
+    title:{text:null},credits:{enabled:false},
+    xAxis:{categories:dates,labels:{style:{color:'#9aa0b4',fontFamily:'Jost, sans-serif'}},lineColor:'rgba(255,255,255,.08)'},
+    yAxis:{gridLineColor:'rgba(255,255,255,.05)',labels:{style:{color:'#7e8497'},formatter:function(){return inrS(this.value);}},title:{text:null}},
+    legend:{enabled:series.length>1,itemStyle:{color:'#cfd3e2',fontFamily:'Jost, sans-serif'}},
+    plotOptions:{column:{depth:40,borderWidth:0,borderRadius:4,states:{hover:{brightness:.12}}}},
+    tooltip:{useHTML:true,backgroundColor:'rgba(20,20,32,.96)',borderColor:'rgba(124,92,255,.4)',
+      formatter:function(){return '<div style="font-family:Jost;padding:3px 5px"><b>'+this.series.name+'</b><br/>'+
+        '📅 '+this.key+'<br/>💰 '+inr(this.y)+'<br/>📦 Qty: '+(this.point.qty||0)+'<br/>🧾 Orders: '+(this.point.orders||0)+'</div>';}},
+    series:hs
+  });
+}
 let USERS=[],ROLES_AVAIL=['Sales Executive','Accountant','Manager'];
 function renderUsers(){
   setContent('<div id="um"></div>');
