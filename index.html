@@ -380,7 +380,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbyD5P13OFALCXS2DkUvzgn0jhkdRrucCDwYQDJxn91erpBtoHoIpIKlolr8buOtARSR/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycby_1zo27HEClaLbf80nD1J5u75xmCpcH6cfbN9y_dkX0YWqvQ8jrsrDE9EEn-XfRIvI/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -1039,7 +1039,11 @@ function renderSalesEntry(){
       '</div></div>'+
     '<div id="pos-work"></div>'+
     '<div class="box"><h4>🧾 Recent unrecorded sales</h4>'+
-      '<input id="pos-fsearch" placeholder="search order id / customer…" oninput="posRenderFeed()" style="margin-bottom:10px">'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
+        '<input id="pos-fsearch" placeholder="search order id / customer…" oninput="posRenderFeed()" style="flex:1;min-width:160px;margin:0">'+
+        '<button class="btn ghost sm" onclick="posReportCSV()">⬇️ CSV</button>'+
+        '<button class="btn ghost sm" onclick="posReportPDF()">🖨️ PDF</button>'+
+      '</div>'+
       '<div id="pos-feed">'+loadingBox()+'</div></div>');
   posLoadStats(); posLoadFeed();
   startAutoRefresh(()=>{ posLoadStats(true); posLoadFeed(true); });
@@ -1070,34 +1074,32 @@ function notesCard(){
 }
 function renderWorkspace(){
   const custom=POS_TYPE==='Custom';
-  let main = custom
-    ? '<div class="box"><h4>🧵 Garment details</h4>'+
-        '<div class="row2"><div class="field"><label>Dress type</label><select id="cs-dress">'+DRESS.map(d=>'<option>'+d+'</option>').join('')+'</select></div>'+
-        '<div class="field"><label>Fabric used</label><input id="cs-fabric"></div></div>'+
-        '<div class="row3"><div class="field"><label>Fabric cost (₹)</label><input id="cs-fc" type="number" min="0" value="0" oninput="posBill()"></div>'+
-        '<div class="field"><label>Stitching cost (₹)</label><input id="cs-sc" type="number" min="0" value="0" oninput="posBill()"></div>'+
-        '<div class="field"><label>Other cost (₹)</label><input id="cs-oc" type="number" min="0" value="0" oninput="posBill()"></div></div>'+
-        '<div class="totbar"><span>Total cost</span><span id="cs-total">₹0</span></div></div>'
-    : '<div class="posgrid">'+
-        '<div class="box"><h4>🔎 Add product</h4>'+
-          '<input id="cs-search" placeholder="type product name / SKU…" oninput="posRenderProducts()" style="margin-bottom:12px">'+
-          '<div id="pos-products">'+loadingBox()+'</div></div>'+
-        '<div class="stickycart"><div class="box"><h4>🛒 Cart</h4><div id="pos-cart"></div></div></div>'+
-      '</div>';
-
-  let deliveryWf = custom
-    ? '<div class="box"><h4>📦 Delivery commitment</h4>'+
+  if(custom){
+    $('pos-work').innerHTML=
+      '<div class="box"><h4>🧵 New custom order</h4>'+
+        '<div class="row2"><div class="field"><label>Customer name</label><input id="cu-name"></div>'+
+        '<div class="field"><label>Phone number</label><input id="cu-mob" inputmode="numeric"></div></div>'+
+        '<div class="field"><label>Dress type / name</label><input id="cs-dress" placeholder="e.g. Lehenga blouse, 3-pc suit, saree fall…"></div>'+
+        '<div class="row3"><div class="field"><label>Total MRP (₹)</label><input id="cs-mrp" type="number" min="0" value="0" oninput="posBill()"></div>'+
+        '<div class="field"><label>Advance (₹)</label><input id="pm-adv" type="number" min="0" value="0" oninput="posBill()"></div>'+
+        '<div class="field"><label>Due amount (auto)</label><input id="pm-bal" readonly></div></div>'+
         '<div class="row2"><div class="field"><label>Commitment date *</label><input id="dl-date" type="date" onchange="posBill()"></div>'+
-        '<div class="field"><label>Priority</label><select id="dl-prio"><option>Low</option><option selected>Normal</option><option>High</option><option>Urgent</option></select></div></div>'+
-        '<div class="row2"><div class="field"><label>Tailor name</label><input id="dl-tailor"></div>'+
-        '<div class="field"><label>Order status</label><select id="dl-wf">'+WF.map(w=>'<option>'+w+'</option>').join('')+'</select></div></div>'+
-        '<div id="dl-remind" class="desc"></div></div>'
-    : '';
-
-  $('pos-work').innerHTML =
-    main +
+        '<div class="field"><label>Payment mode</label><select id="pm-mode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option></select></div></div>'+
+        '<div class="field"><label>Remarks (optional)</label><input id="nt-rem"></div>'+
+        '<div id="dl-remind" class="desc" style="margin:6px 0"></div>'+
+        '<button class="btn" onclick="posSave(\'record\')">✅ Submit order → Pending</button>'+
+        '<p class="desc" style="margin-top:8px">Order ID & date auto-generate. Fabric & stitching costs are added later when you Complete the order.</p>'+
+      '</div>';
+    posBill(); return;
+  }
+  $('pos-work').innerHTML=
+    '<div class="posgrid">'+
+      '<div class="box"><h4>🔎 Add product</h4>'+
+        '<input id="cs-search" placeholder="type product name / SKU…" oninput="posRenderProducts()" style="margin-bottom:12px">'+
+        '<div id="pos-products">'+loadingBox()+'</div></div>'+
+      '<div class="stickycart"><div class="box"><h4>🛒 Cart</h4><div id="pos-cart"></div></div></div>'+
+    '</div>'+
     '<div class="grid2">'+custCard()+payCard()+'</div>'+
-    deliveryWf +
     '<div class="grid2">'+notesCard()+
       '<div class="box"><h4>🧾 Bill preview</h4><div id="pos-bill"></div>'+
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'+
@@ -1105,9 +1107,7 @@ function renderWorkspace(){
         '<button class="btn ghost sm" onclick="posSave(\'draft\')">Save draft</button>'+
         '<button class="btn ghost sm" onclick="posPrintCurrent()">🖨️ Print</button></div></div>'+
     '</div>';
-
-  if(!custom){ renderCart(); posLoadProducts(); }
-  posBill();
+  renderCart(); posLoadProducts(); posBill();
 }
 /* ----- products (cash) ----- */
 function posLoadProducts(){
@@ -1154,7 +1154,7 @@ function renderCart(){
 /* ----- totals + live bill ----- */
 function posCashSub(){ let s=0; POS_CART.forEach(c=>s+=c.qty*c.price); return s; }
 function posTotal(){
-  if(POS_TYPE==='Custom'){ return (parseFloat(val('cs-fc'))||0)+(parseFloat(val('cs-sc'))||0)+(parseFloat(val('cs-oc'))||0); }
+  if(POS_TYPE==='Custom'){ return parseFloat(val('cs-mrp'))||0; }
   return Math.max(0, posCashSub()-(parseFloat(val('cs-disc'))||0));
 }
 function posBill(){
@@ -1167,10 +1167,10 @@ function posBill(){
   const bx=$('pos-bill'); if(!bx)return;
   const custom=POS_TYPE==='Custom';
   let lines = custom
-    ? [{item:(val('cs-dress')||'Custom')+(val('cs-fabric')?(' · '+val('cs-fabric')):''),qty:1,price:total}]
+    ? [{item:(val('cs-dress')||'Custom order'),qty:1,price:total}]
     : POS_CART.map(c=>({item:c.item,qty:c.qty,price:c.price}));
   if(!custom && !POS_CART.length){ bx.innerHTML='<p class="desc">Add items to see bill.</p>'; return; }
-  if(custom && total<=0){ bx.innerHTML='<p class="desc">Enter costs to see bill.</p>'; return; }
+  if(custom && total<=0){ bx.innerHTML='<p class="desc">Enter Total MRP to see the order slip.</p>'; return; }
   bx.innerHTML='<div style="text-align:center;border-bottom:1px dashed var(--brd);padding-bottom:8px;margin-bottom:8px"><div style="font-size:19px;font-weight:800">Ikxari</div><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Your X Factor in Luxury</div></div>'+
     '<table style="width:100%;font-size:13px"><tbody>'+
     lines.map(l=>'<tr><td>'+esc(l.item)+'</td><td style="text-align:center">'+l.qty+'</td><td style="text-align:right">'+inr(l.qty*l.price)+'</td></tr>').join('')+
@@ -1184,30 +1184,28 @@ function posSave(status){
   if(!POS_TYPE)return toast('Choose sale type first','err');
   const custom=POS_TYPE==='Custom';
   if(!custom && !POS_CART.length)return toast('Cart is empty','err');
-  if(custom && posTotal()<=0)return toast('Enter at least one cost','err');
-  if(custom && !val('dl-date'))return modalAlert('Commitment date is required for a custom order.','Delivery date','📦');
+  if(custom && posTotal()<=0)return toast('Enter Total MRP','err');
+  if(custom && !val('dl-date'))return modalAlert('Commitment date is required for a custom order.','Commitment date','📦');
   const p={action:'saveOrder',token:tGet(),type:POS_TYPE,status:status,
     customer:val('cu-name'),mobile:val('cu-mob'),
     advance:parseFloat(val('pm-adv'))||0,paymentMode:val('pm-mode'),remarks:val('nt-rem')};
   if(custom){
-    p.dressType=val('cs-dress'); p.fabric=val('cs-fabric');
-    p.fabricCost=parseFloat(val('cs-fc'))||0; p.stitchCost=parseFloat(val('cs-sc'))||0; p.otherCost=parseFloat(val('cs-oc'))||0;
-    p.deliveryDate=val('dl-date'); p.priority=val('dl-prio'); p.tailor=val('dl-tailor'); p.workflow=val('dl-wf'); p.feedback=val('nt-fb');
+    p.dressType=val('cs-dress'); p.totalMrp=parseFloat(val('cs-mrp'))||0; p.deliveryDate=val('dl-date');
   } else {
     p.items=POS_CART.map(c=>({item:c.item,qty:c.qty,price:c.price})); p.discount=parseFloat(val('cs-disc'))||0;
   }
   api(p).then(d=>{
     if(!d.ok)return modalAlert(d.error,'Failed','⚠️');
     toast(d.msg,'ok'); POS_CART=[]; posLoadStats(); posLoadFeed(); renderWorkspace();
-    modalConfirm({icon:'✅',title:status==='record'?'Sale recorded':'Draft saved',message:d.order.invoice+' · '+inr(d.order.total)+(d.order.balance>0?(' · balance '+inr(d.order.balance)):''),confirmText:'Print bill',cancelText:'Close',onConfirm:()=>printOrderBill(d.order)});
+    modalConfirm({icon:'✅',title:custom?'Order submitted':(status==='record'?'Sale recorded':'Draft saved'),message:d.order.invoice+' · '+inr(d.order.total)+(d.order.balance>0?(' · due '+inr(d.order.balance)):''),confirmText:'Print slip',cancelText:'Close',onConfirm:()=>printOrderBill(d.order)});
   }).catch(e=>toast(e.message,'err'));
 }
 function posPrintCurrent(){
   const custom=POS_TYPE==='Custom', total=posTotal();
   if(!custom && !POS_CART.length)return toast('Cart empty','err');
-  if(custom && total<=0)return toast('Enter costs','err');
+  if(custom && total<=0)return toast('Enter MRP','err');
   const adv=parseFloat(val('pm-adv'))||0;
-  const items=custom?[{item:(val('cs-dress')||'Custom')+(val('cs-fabric')?(' · '+val('cs-fabric')):''),qty:1,price:total}]:POS_CART.map(c=>({item:c.item,qty:c.qty,price:c.price}));
+  const items=custom?[{item:(val('cs-dress')||'Custom order'),qty:1,price:total}]:POS_CART.map(c=>({item:c.item,qty:c.qty,price:c.price}));
   printOrderBill({invoice:'(preview)',date:new Date().toLocaleString('en-IN'),customer:val('cu-name'),type:POS_TYPE,items:items,total:total,advance:adv,balance:Math.max(0,total-adv),deliveryDate:custom?val('dl-date'):''});
 }
 function printOrderBill(o){
@@ -1253,33 +1251,87 @@ function posRenderFeed(){
   if(!list.length){ $('pos-feed').innerHTML=noData('No unrecorded sales yet.'); return; }
   $('pos-feed').innerHTML=tbl(['Order ID','Customer','Type','Detail','Amount','Delivery','Status','Actions'],
     list.map(o=>{
-      const detail = o.type==='Custom' ? (esc(o.dressType||'Custom')+(o.tailor?'<br><span class="muted" style="font-size:11px">👤 '+esc(o.tailor)+'</span>':'')) : (o.count+' item'+(o.count>1?'s':''));
+      let detail = o.type==='Custom' ? esc(o.dressType||'Custom') : (o.count+' item'+(o.count>1?'s':''));
+      if(o.type==='Custom' && o.deliveryStatus==='Completed') detail+='<br><span class="muted" style="font-size:11px">cost '+inr(o.totalCost)+' · profit '+inr(o.profit)+'</span>';
+      else if(o.type==='Custom' && o.tailor) detail+='<br><span class="muted" style="font-size:11px">👤 '+esc(o.tailor)+'</span>';
       let dely='—';
       if(o.type==='Custom'&&o.deliveryDate){ const dd=esc(String(o.deliveryDate).slice(0,10));
-        const badge=o.delayStatus==='Delayed'?'<span class="badge bg-Cancelled">Delayed '+o.delayDays+'d</span>':(o.delayStatus==='On Time'?'<span class="badge bg-Active">On time</span>':'');
+        const badge=o.delayStatus==='Delayed'?'<span class="badge bg-Cancelled">Delayed '+o.delayDays+'d</span>':(o.delayStatus==='On Time'?'<span class="badge bg-Active">On time</span>':(o.delayStatus?'<span class="badge bg-Pending">'+esc(o.delayStatus)+'</span>':''));
         dely=dd+'<br>'+badge; }
       const st = o.type==='Custom'
-        ? '<span class="badge '+(o.deliveryStatus==='Delivered'?'bg-Active':(o.deliveryStatus==='Cancelled'?'bg-Cancelled':'bg-Pending'))+'">'+esc(o.deliveryStatus||'-')+'</span>'
+        ? '<span class="badge '+(o.deliveryStatus==='Completed'?'bg-Active':(o.deliveryStatus==='Cancelled'?'bg-Cancelled':'bg-Pending'))+'">'+esc(o.deliveryStatus||'-')+'</span>'
         : '<span class="badge '+(o.status==='Recorded'?'bg-Active':'bg-Pending')+'">'+esc(o.status)+'</span>';
       let act=[];
       if(o.status==='Draft') act.push('<button class="icbtn ok" onclick="posRecord(\''+o.id+'\')">Record</button>');
-      if(o.type==='Custom') act.push('<button class="icbtn" onclick="posStatus(\''+o.id+'\',\''+esc(o.deliveryStatus)+'\')">Status</button>');
+      if(o.type==='Custom' && o.deliveryStatus==='Pending') act.push('<button class="icbtn ok" onclick="posComplete(\''+o.id+'\')">Complete</button>');
       if(o.balance>0) act.push('<button class="icbtn" onclick="posPay(\''+o.id+'\','+o.balance+')">Pay ₹'+Math.round(o.balance)+'</button>');
       act.push('<button class="icbtn" onclick="posPrintFeed(\''+o.id+'\')">Print</button>');
       act.push('<button class="icbtn dng" onclick="posDelete(\''+o.id+'\')">Del</button>');
       return [esc(o.invoice),esc(o.customer||'Walk-in'),
         '<span class="badge '+(o.type==='Custom'?'bg-Pending':'bg-Active')+'">'+esc(o.type)+'</span>',
-        detail, inr(o.total)+(o.balance>0?'<br><span style="font-size:11px;color:#ffce85">bal '+inr(o.balance)+'</span>':''),
+        detail, inr(o.total)+(o.balance>0?'<br><span style="font-size:11px;color:#ffce85">due '+inr(o.balance)+'</span>':''),
         dely, st, act.join(' ')];
     }));
 }
 function posRecord(id){ api({action:'recordOrder',token:tGet(),orderId:id}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){posLoadFeed();posLoadStats();}}).catch(e=>toast(e.message,'err')); }
-function posStatus(id,cur){
-  fmForm('Update order status',
-    '<div class="field"><label>Status</label><select id="os-st">'+WF.map(s=>'<option'+(s===cur?' selected':'')+'>'+s+'</option>').join('')+'</select></div>'+
-    '<button class="btn" onclick="posSaveStatus(\''+id+'\')">Save</button>');
+let _COMRP=0;
+function posComplete(id){
+  const o=POS_FEED.find(x=>x.id===id); if(!o)return; _COMRP=o.mrp||o.total||0;
+  let delayDays=0, late=false;
+  if(o.deliveryDate){ const cd=new Date(String(o.deliveryDate).slice(0,10)); const t=new Date(); t.setHours(0,0,0,0); cd.setHours(0,0,0,0);
+    if(t>cd){ delayDays=Math.round((t-cd)/86400000); late=true; } }
+  fmForm('Complete order — '+esc(o.invoice),
+    '<p class="desc" style="margin-bottom:8px">'+esc(o.dressType||'Custom')+' · MRP <b>'+inr(_COMRP)+'</b> · commit '+esc(String(o.deliveryDate||'').slice(0,10))+'</p>'+
+    '<div class="field"><label>Fabric used</label><input id="co-fab"></div>'+
+    '<div class="row3"><div class="field"><label>Fabric cost (₹)</label><input id="co-fc" type="number" min="0" value="0" oninput="coTot()"></div>'+
+    '<div class="field"><label>Stitching cost (₹)</label><input id="co-sc" type="number" min="0" value="0" oninput="coTot()"></div>'+
+    '<div class="field"><label>Other cost (₹)</label><input id="co-oc" type="number" min="0" value="0" oninput="coTot()"></div></div>'+
+    '<div class="totbar"><span>Total cost</span><span id="co-total">₹0</span></div>'+
+    '<div id="co-cmp" class="desc" style="margin:6px 0"></div>'+
+    '<div class="row2"><div class="field"><label>Delay days (auto)</label><input id="co-delay" value="'+delayDays+'" readonly></div>'+
+    '<div class="field"><label>Status (auto)</label><input id="co-stat" value="'+(late?'Delayed':'On Time')+'" readonly></div></div>'+
+    (late?'<div class="field"><label>Delay reason *</label><input id="co-reason" placeholder="why was it late?"></div>':'')+
+    '<button class="btn" onclick="posSaveComplete(\''+id+'\','+(late?1:0)+')">✅ Mark completed</button>');
+  setTimeout(coTot,60);
 }
-function posSaveStatus(id){ closeForm(); api({action:'orderStatus',token:tGet(),orderId:id,deliveryStatus:val('os-st')}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){posLoadFeed();posLoadStats();}}).catch(e=>toast(e.message,'err')); }
+function coTot(){
+  var t=(parseFloat(val('co-fc'))||0)+(parseFloat(val('co-sc'))||0)+(parseFloat(val('co-oc'))||0);
+  if($('co-total'))$('co-total').textContent=inr(t);
+  if($('co-cmp')){ $('co-cmp').innerHTML = t>_COMRP
+      ? '⚠️ <b style="color:#ff97a2">Cost '+inr(t)+' exceeds MRP '+inr(_COMRP)+'</b> — loss '+inr(t-_COMRP)
+      : '✅ Profit <b style="color:#7fe9c0">'+inr(_COMRP-t)+'</b> (MRP '+inr(_COMRP)+' − cost '+inr(t)+')'; }
+}
+function posSaveComplete(id,late){
+  if(late && !val('co-reason'))return toast('Delay reason required','err');
+  closeForm();
+  api({action:'completeOrder',token:tGet(),orderId:id,fabric:val('co-fab'),
+    fabricCost:parseFloat(val('co-fc'))||0,stitchCost:parseFloat(val('co-sc'))||0,otherCost:parseFloat(val('co-oc'))||0,
+    delayReason:val('co-reason')}).then(d=>{
+    if(!d.ok)return modalAlert(d.error,'Cannot complete','⚠️');
+    toast(d.msg,'ok'); posLoadFeed(); posLoadStats(); var s=d.summary;
+    modalAlert('Cost '+inr(s.totalCost)+' · MRP '+inr(s.mrp)+' · Profit '+inr(s.profit)+(s.delayDays>0?(' · '+s.delayDays+'d late'):' · on time'),'Order completed','✅');
+  }).catch(e=>toast(e.message,'err'));
+}
+function csvq(s){ s=String(s==null?'':s); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+function posReportCSV(){
+  var rows=POS_FEED.filter(o=>o.type==='Custom');
+  if(!rows.length)return toast('No custom orders','err');
+  var head=['Order ID','Date','Customer','Phone','Dress','MRP','Advance','Due','Commitment','Status','Delay days','Tailor','Total cost','Profit'];
+  var lines=[head.join(',')].concat(rows.map(o=>[o.invoice,o.date,csvq(o.customer),csvq(o.mobile),csvq(o.dressType),o.mrp,o.advance,o.balance,String(o.deliveryDate||'').slice(0,10),o.deliveryStatus,o.delayDays,csvq(o.tailor),o.totalCost,o.profit].join(',')));
+  var blob=new Blob([lines.join('\n')],{type:'text/csv'}); var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='ikxari_orders_'+iso(new Date())+'.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
+function posReportPDF(){
+  var rows=POS_FEED.filter(o=>o.type==='Custom');
+  if(!rows.length)return toast('No custom orders','err');
+  var w=window.open('','_blank','width=820,height=900');
+  w.document.write('<html><head><title>Ikxari orders</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{margin:0}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}th,td{border:1px solid #ccc;padding:5px;text-align:left}th{background:#f0f0f0}.late{color:#c0392b;font-weight:700}</style></head><body>'+
+    '<h2>Ikxari — Custom Orders</h2><div style="color:#666;font-size:12px">Generated '+new Date().toLocaleString('en-IN')+' · Built by Somnath Karmakar</div>'+
+    '<table><thead><tr><th>Order ID</th><th>Customer</th><th>Dress</th><th>MRP</th><th>Due</th><th>Commit</th><th>Status</th><th>Delay</th></tr></thead><tbody>'+
+    rows.map(o=>'<tr><td>'+o.invoice+'</td><td>'+(o.customer||'')+'</td><td>'+(o.dressType||'')+'</td><td>₹'+Math.round(o.mrp)+'</td><td>₹'+Math.round(o.balance)+'</td><td>'+String(o.deliveryDate||'').slice(0,10)+'</td><td>'+o.deliveryStatus+'</td><td class="'+(o.delayStatus==='Delayed'?'late':'')+'">'+(o.delayStatus==='Delayed'?(o.delayDays+'d late'):(o.delayStatus||''))+'</td></tr>').join('')+
+    '</tbody></table></body></html>');
+  w.document.close(); setTimeout(()=>w.print(),400);
+}
 function posPay(id,bal){
   fmForm('Collect balance',
     '<p class="desc" style="margin-bottom:10px">Outstanding: <b>'+inr(bal)+'</b></p>'+
