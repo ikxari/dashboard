@@ -121,6 +121,9 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 .pill{font-size:12px;padding:6px 12px;border-radius:20px;border:1px solid var(--brd);background:var(--inp);color:var(--muted);cursor:pointer;font-family:Jost,sans-serif;transition:.2s;white-space:nowrap}
 .pill:hover{border-color:var(--accent);color:var(--txt)}
 .pill.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(124,92,255,.35)}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px 22px;color:var(--muted);text-align:center}
+.empty svg{opacity:.45;color:var(--accent)}
+.empty span{font-size:13.5px;font-family:Jost,sans-serif;max-width:280px;line-height:1.5}
 .chartbox h4{font-size:15px;font-weight:600;margin:0 4px 6px;padding:0 4px;display:flex;align-items:center;gap:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .pagehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px}
@@ -384,7 +387,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbzEvpxcz8LH6OEHEebW9C4RvK_khNit629PEwu5z82Xdvvx1w6sscgZz2xVm9qwuFLX/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbw9kEVWESVwaPMTxh90-hWUgBnSPC_A4slpM1sgbJnkCrumh189n3vDmOWK4-6zdhA7/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -683,7 +686,7 @@ function statCard(label,n,sub){return '<div class="stat"><div class="n">'+n+'</d
 function pagehead(title,sub,tab){return '<div class="pagehead"><div><h3>'+esc(title)+'</h3><div class="sub">'+esc(sub)+'</div></div>'+
   '<button class="btn ghost sm" onclick="refreshTab()">↻ Refresh</button></div>';}
 function loadingBox(){return '<div class="soon"><div class="ic">⏳</div><h3>Loading…</h3><p>Fetching live data from your sheet.</p></div>';}
-function noData(msg){return '<div class="soon"><div class="ic">📭</div><h3>No data</h3><p>'+esc(msg||'Nothing to show yet.')+'</p></div>';}
+function noData(msg){return '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg><span>'+esc(msg||'Nothing to show yet.')+'</span></div>';}
 
 /* ---------- Overview = Activity Monitor (Super Admin) ---------- */
 function renderOverview(){
@@ -1047,7 +1050,7 @@ function renderSalesEntry(){
       '</div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
         '<input id="pos-fsearch" placeholder="search order id / customer…" oninput="posRenderFeed()" style="flex:1;min-width:150px;margin:0">'+
-        '<input type="date" id="pos-fdate" onchange="posRenderFeed()" title="show orders due on or before this date" style="margin:0;width:auto">'+
+        '<input type="date" id="pos-fdate" onchange="posRenderFeed()" title="show deliveries committed for this date" style="margin:0;width:auto">'+
         '<button class="btn ghost sm" onclick="posClearDate()" title="clear date">✕ Date</button>'+
         '<button class="btn ghost sm" onclick="posReportCSV()">⬇️ CSV</button>'+
         '<button class="btn ghost sm" onclick="posReportPDF()">🖨️ PDF</button>'+
@@ -1266,10 +1269,13 @@ function posRenderFeed(){
     if(POS_FILTER==='overdue')   return o.type==='Custom'&&o.deliveryStatus==='Pending'&&o.delayStatus==='Delayed';
     return true;
   });
-  if(fdate) list=list.filter(o=>{ var d=cd(o); return d && d<=fdate; });
+  if(fdate) list=list.filter(o=>o.type==='Custom' && cd(o)===fdate);
   const q=(val('pos-fsearch')||'').toLowerCase();
   list=list.filter(o=>(o.invoice+' '+(o.customer||'')).toLowerCase().indexOf(q)>=0);
-  if(!list.length){ $('pos-feed').innerHTML=noData('No orders match this filter.'); return; }
+  if(!list.length){
+    var msg = fdate ? ('No deliveries committed for '+fdate.split('-').reverse().join('-')+'. Pick another date or tap ✕ Date.')
+            : (POS_FILTER!=='all' ? 'No orders in this view.' : 'No orders yet — submit one above.');
+    $('pos-feed').innerHTML=noData(msg); return; }
   $('pos-feed').innerHTML=tbl(['Order ID','Customer','Type','Detail','Amount','Delivery','Status','Actions'],
     list.map(o=>{
       let detail = o.type==='Custom' ? esc(o.dressType||'Custom') : (o.count+' item'+(o.count>1?'s':''));
