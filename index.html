@@ -116,7 +116,11 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 .box{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:20px;margin-bottom:18px}
 .box h4{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .box .desc{font-size:13px;color:var(--muted);line-height:1.6}
-.chartbox{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:18px 14px 6px;margin-bottom:18px}
+.chartbox{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:18px 14px 6px;margin-bottom:18px;box-shadow:0 10px 30px rgba(0,0,0,.22);position:relative;overflow:hidden}
+.chartbox::before{content:'';position:absolute;inset:0;background:radial-gradient(120% 80% at 0% 0%,rgba(124,92,255,.08),transparent 60%);pointer-events:none}
+.pill{font-size:12px;padding:6px 12px;border-radius:20px;border:1px solid var(--brd);background:var(--inp);color:var(--muted);cursor:pointer;font-family:Jost,sans-serif;transition:.2s;white-space:nowrap}
+.pill:hover{border-color:var(--accent);color:var(--txt)}
+.pill.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(124,92,255,.35)}
 .chartbox h4{font-size:15px;font-weight:600;margin:0 4px 6px;padding:0 4px;display:flex;align-items:center;gap:8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .pagehead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px}
@@ -625,7 +629,7 @@ function hcArea(id,cats,series){
     tooltip:Object.assign({trigger:'axis',valueFormatter:function(v){return inr(v);}},TT),
     xAxis:{type:'category',data:cats,boundaryGap:false,axisLabel:{color:'#9aa0b4',fontFamily:'Jost',hideOverlap:true,rotate:(cats.length||0)>12?38:0},axisLine:{lineStyle:{color:'rgba(255,255,255,.12)'}}},
     yAxis:{type:'value',axisLabel:axL(true),splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
-    series:series.map(function(s,i){var col=s.color||HC_COLORS[i%HC_COLORS.length];return {name:s.name,type:'line',smooth:true,showSymbol:false,data:s.data,lineStyle:{width:2.6,color:col},itemStyle:{color:col},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:col+'80'},{offset:1,color:col+'05'}])}};}) });
+    series:series.map(function(s,i){var col=s.color||HC_COLORS[i%HC_COLORS.length];return {name:s.name,type:'line',smooth:true,showSymbol:false,data:s.data,lineStyle:{width:3,color:col,shadowBlur:12,shadowColor:col+'66'},itemStyle:{color:col},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:col+'80'},{offset:1,color:col+'05'}])}};}),animationDuration:1000,animationEasing:'cubicOut' });
 }
 /* horizontal bar — sorted desc input (cats[0]=highest), data labels */
 function hbar(id,cats,data,color,money){
@@ -635,8 +639,10 @@ function hbar(id,cats,data,color,money){
     tooltip:Object.assign({trigger:'item',formatter:function(p){return p.name+'<br/><b>'+(money?inr(p.value):Number(p.value).toLocaleString('en-IN'))+'</b>';}},TT),
     xAxis:{type:'value',axisLabel:axL(money),splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
     yAxis:{type:'category',data:cc,axisLabel:{color:'#cfd3e2',fontFamily:'Jost',fontSize:11,width:150,overflow:'truncate'},axisLine:{lineStyle:{color:'rgba(255,255,255,.08)'}},axisTick:{show:false}},
-    series:[{type:'bar',data:dd,barMaxWidth:20,itemStyle:{borderRadius:[0,6,6,0],color:color||new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#7c5cff'},{offset:1,color:'#46b5ff'}])},
-      label:{show:true,position:'right',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrS(p.value):Number(p.value).toLocaleString('en-IN');}}}] });
+    series:[{type:'bar',data:dd,barMaxWidth:22,
+      itemStyle:{borderRadius:[0,7,7,0],shadowBlur:10,shadowColor:'rgba(124,92,255,.25)',shadowOffsetX:2,color:color||new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#9a7cff'},{offset:1,color:'#46b5ff'}])},
+      label:{show:true,position:'right',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrS(p.value):Number(p.value).toLocaleString('en-IN');}}}],
+    animationDuration:900,animationEasing:'cubicOut',animationDelay:function(i){return i*40;} });
 }
 /* ranked horizontal bar (#1, #2 …) */
 function hcBarV(id,names,values,money){ hcCylinder; var ranked=names.map(function(n,i){return '#'+(i+1)+'  '+n;}); hbar(id,ranked,values,null,money); }
@@ -648,8 +654,9 @@ function hcColumn(id,cats,data,color,money){
     tooltip:Object.assign({trigger:'axis',valueFormatter:function(v){return money?inr(v):Number(v).toLocaleString('en-IN');}},TT),
     xAxis:{type:'category',data:cats,axisLabel:{color:'#9aa0b4',fontFamily:'Jost',rotate:(cats.length||0)>8?38:0,hideOverlap:true},axisLine:{lineStyle:{color:'rgba(255,255,255,.12)'}}},
     yAxis:{type:'value',axisLabel:axL(money),splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
-    series:[{type:'bar',data:data.map(function(x){return Math.round(x);}),barMaxWidth:40,itemStyle:{borderRadius:[6,6,0,0],color:color||new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#9a7bff'},{offset:1,color:'#5b3fd6'}])},
-      label:{show:true,position:'top',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrS(p.value):Number(p.value).toLocaleString('en-IN');}}}] });
+    series:[{type:'bar',data:data.map(function(x){return Math.round(x);}),barMaxWidth:42,itemStyle:{borderRadius:[7,7,0,0],shadowBlur:10,shadowColor:'rgba(124,92,255,.28)',shadowOffsetY:-2,color:color||new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#b39bff'},{offset:1,color:'#5b3fd6'}])},
+      label:{show:true,position:'top',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrS(p.value):Number(p.value).toLocaleString('en-IN');}}}],
+    animationDuration:900,animationEasing:'elasticOut',animationDelay:function(i){return i*50;} });
 }
 /* flat pie/donut — only for <=5 categories (GST rates) */
 function hcPie3D(id,labels,data,money){
@@ -733,10 +740,8 @@ function renderSales(){
         '<div class="chartbox"><h4>📅 Daily revenue trend</h4><div id="saDaily"></div></div>'+
       '</div>'+
       '<div class="chartbox"><h4>🏭 Revenue by distributor — top 20</h4><div id="saDist"></div></div>'+
-      '<div class="grid2">'+
-        '<div class="chartbox"><h4>👗 Revenue by product — top 20</h4><div id="saPRev"></div></div>'+
-        '<div class="chartbox"><h4>📦 Quantity sold by product — top 20</h4><div id="saPQty"></div></div>'+
-      '</div>'+
+      '<div class="chartbox"><h4>👗 Revenue by product — top 20</h4><div id="saPRev"></div></div>'+
+      '<div class="chartbox"><h4>📦 Quantity sold by product — top 20</h4><div id="saPQty"></div></div>'+
       '<div class="grid2">'+
         '<div class="chartbox"><h4>🙋‍♀️ Revenue by sales-girl</h4><div id="saGRev"></div></div>'+
         '<div class="chartbox"><h4>🙋‍♀️ Quantity by sales-girl</h4><div id="saGQty"></div></div>'+
@@ -850,16 +855,14 @@ function renderGST(){
       statCard('GST Captured',inrS(k.gstCollected),'held for govt')+
       statCard('Taxable Revenue',inrS(k.taxableRevenue))+
       statCard('Purchase GST',inrS(k.purchaseGst),'input tax credit')+
-      statCard('Net GST Liability',inrS(k.netLiability),'sales − purchase GST')+
+      statCard('Net GST Liability',inrS(k.netLiability),k.netLiability<0?'input credit · carry fwd':'payable to govt')+
     '</div>'+
     '<div class="grid2">'+
       '<div class="chartbox"><h4>📈 GST collection trend (monthly)</h4><div id="gsMonth"></div></div>'+
       '<div class="chartbox"><h4>📅 GST captured trend (daily)</h4><div id="gsTrend"></div></div>'+
     '</div>'+
-    '<div class="grid2">'+
-      '<div class="chartbox"><h4>👗 GST by product — top 20</h4><div id="gsProd"></div></div>'+
-      '<div class="chartbox"><h4>🏭 GST by distributor — top 20</h4><div id="gsDist"></div></div>'+
-    '</div>';
+    '<div class="chartbox"><h4>👗 GST by product — top 20</h4><div id="gsProd"></div></div>'+
+    '<div class="chartbox"><h4>🏭 GST by distributor — top 20</h4><div id="gsDist"></div></div>';
     var gm=d.gstMonthly||[]; hcArea('gsMonth',gm.map(x=>x.m),[{name:'GST',data:gm.map(x=>x.gst),color:'#7c5cff'}]);
     var tr=d.trend||[]; hcArea('gsTrend',tr.map(x=>x.date),[{name:'GST',data:tr.map(x=>Math.round(x.gst)),color:'#37d399'}]);
     var gp=d.gstByProduct||[]; hbar('gsProd',gp.map(x=>x.name),gp.map(x=>x.value),'#37d399',true);
@@ -1024,7 +1027,7 @@ function editPLine(id){
 }
 /* ========== UNRECORDED SALES — POS workspace ========== */
 /* ========== UNRECORDED SALES — POS workspace (tailoring upgrade) ========== */
-let POS_TYPE='', POS_CART=[], POS_STOCK=[], POS_FEED=[];
+let POS_TYPE='', POS_CART=[], POS_STOCK=[], POS_FEED=[], POS_FILTER='all';
 const WF=['Pending','In Cutting','In Stitching','Ready','Delivered','Cancelled'];
 const DRESS=['Shirt','Pant','Suit','Blouse','Kurti','Saree Work','Custom'];
 function renderSalesEntry(){
@@ -1039,8 +1042,12 @@ function renderSalesEntry(){
       '</div></div>'+
     '<div id="pos-work"></div>'+
     '<div class="box"><h4>🧾 Recent unrecorded sales</h4>'+
+      '<div id="pos-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
+        ['all|All','pending|⏳ Pending','today|🔔 Due today','tomorrow|📅 Due tomorrow','overdue|🚨 Overdue','completed|✅ Completed'].map(function(p){var x=p.split("|");return '<button class="pill'+(x[0]==="all"?" on":"")+'" data-f="'+x[0]+'" onclick="posFilter(\''+x[0]+'\')">'+x[1]+'</button>';}).join("")+
+      '</div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
-        '<input id="pos-fsearch" placeholder="search order id / customer…" oninput="posRenderFeed()" style="flex:1;min-width:160px;margin:0">'+
+        '<input id="pos-fsearch" placeholder="search order id / customer…" oninput="posRenderFeed()" style="flex:1;min-width:150px;margin:0">'+
+        '<input type="date" id="pos-fdate" onchange="posRenderFeed()" title="filter by commitment date" style="margin:0;width:auto">'+
         '<button class="btn ghost sm" onclick="posReportCSV()">⬇️ CSV</button>'+
         '<button class="btn ghost sm" onclick="posReportPDF()">🖨️ PDF</button>'+
       '</div>'+
@@ -1244,11 +1251,23 @@ function posLoadStats(silent){
 function posLoadFeed(silent){
   (silent?apiS:api)({action:'ordersFeed',token:tGet()}).then(d=>{ if(!d||!d.ok)return; POS_FEED=d.feed||[]; posRenderFeed(); }).catch(()=>{});
 }
+function posFilter(f){ POS_FILTER=f; var p=document.querySelectorAll('#pos-pills .pill'); for(var i=0;i<p.length;i++) p[i].classList.toggle('on',p[i].getAttribute('data-f')===f); posRenderFeed(); }
 function posRenderFeed(){
   if(!$('pos-feed'))return;
+  const today=iso(new Date()), tm=iso(new Date(Date.now()+86400000)), fdate=val('pos-fdate');
+  const cd=o=>String(o.deliveryDate||'').slice(0,10);
+  let list=POS_FEED.filter(o=>{
+    if(POS_FILTER==='pending')   return o.type==='Custom'&&o.deliveryStatus==='Pending';
+    if(POS_FILTER==='completed') return o.deliveryStatus==='Completed';
+    if(POS_FILTER==='today')     return o.type==='Custom'&&o.deliveryStatus==='Pending'&&cd(o)===today;
+    if(POS_FILTER==='tomorrow')  return o.type==='Custom'&&o.deliveryStatus==='Pending'&&cd(o)===tm;
+    if(POS_FILTER==='overdue')   return o.type==='Custom'&&o.deliveryStatus==='Pending'&&o.delayStatus==='Delayed';
+    return true;
+  });
+  if(fdate) list=list.filter(o=>cd(o)===fdate);
   const q=(val('pos-fsearch')||'').toLowerCase();
-  const list=POS_FEED.filter(o=>(o.invoice+' '+(o.customer||'')).toLowerCase().indexOf(q)>=0);
-  if(!list.length){ $('pos-feed').innerHTML=noData('No unrecorded sales yet.'); return; }
+  list=list.filter(o=>(o.invoice+' '+(o.customer||'')).toLowerCase().indexOf(q)>=0);
+  if(!list.length){ $('pos-feed').innerHTML=noData('No orders match this filter.'); return; }
   $('pos-feed').innerHTML=tbl(['Order ID','Customer','Type','Detail','Amount','Delivery','Status','Actions'],
     list.map(o=>{
       let detail = o.type==='Custom' ? esc(o.dressType||'Custom') : (o.count+' item'+(o.count>1?'s':''));
