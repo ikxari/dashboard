@@ -384,7 +384,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycby_1zo27HEClaLbf80nD1J5u75xmCpcH6cfbN9y_dkX0YWqvQ8jrsrDE9EEn-XfRIvI/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbzEvpxcz8LH6OEHEebW9C4RvK_khNit629PEwu5z82Xdvvx1w6sscgZz2xVm9qwuFLX/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -1047,7 +1047,8 @@ function renderSalesEntry(){
       '</div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'+
         '<input id="pos-fsearch" placeholder="search order id / customer…" oninput="posRenderFeed()" style="flex:1;min-width:150px;margin:0">'+
-        '<input type="date" id="pos-fdate" onchange="posRenderFeed()" title="filter by commitment date" style="margin:0;width:auto">'+
+        '<input type="date" id="pos-fdate" onchange="posRenderFeed()" title="show orders due on or before this date" style="margin:0;width:auto">'+
+        '<button class="btn ghost sm" onclick="posClearDate()" title="clear date">✕ Date</button>'+
         '<button class="btn ghost sm" onclick="posReportCSV()">⬇️ CSV</button>'+
         '<button class="btn ghost sm" onclick="posReportPDF()">🖨️ PDF</button>'+
       '</div>'+
@@ -1251,6 +1252,7 @@ function posLoadStats(silent){
 function posLoadFeed(silent){
   (silent?apiS:api)({action:'ordersFeed',token:tGet()}).then(d=>{ if(!d||!d.ok)return; POS_FEED=d.feed||[]; posRenderFeed(); }).catch(()=>{});
 }
+function posClearDate(){ if($('pos-fdate'))$('pos-fdate').value=''; posRenderFeed(); }
 function posFilter(f){ POS_FILTER=f; var p=document.querySelectorAll('#pos-pills .pill'); for(var i=0;i<p.length;i++) p[i].classList.toggle('on',p[i].getAttribute('data-f')===f); posRenderFeed(); }
 function posRenderFeed(){
   if(!$('pos-feed'))return;
@@ -1264,7 +1266,7 @@ function posRenderFeed(){
     if(POS_FILTER==='overdue')   return o.type==='Custom'&&o.deliveryStatus==='Pending'&&o.delayStatus==='Delayed';
     return true;
   });
-  if(fdate) list=list.filter(o=>cd(o)===fdate);
+  if(fdate) list=list.filter(o=>{ var d=cd(o); return d && d<=fdate; });
   const q=(val('pos-fsearch')||'').toLowerCase();
   list=list.filter(o=>(o.invoice+' '+(o.customer||'')).toLowerCase().indexOf(q)>=0);
   if(!list.length){ $('pos-feed').innerHTML=noData('No orders match this filter.'); return; }
