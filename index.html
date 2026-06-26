@@ -387,7 +387,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbw9kEVWESVwaPMTxh90-hWUgBnSPC_A4slpM1sgbJnkCrumh189n3vDmOWK4-6zdhA7/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbwgcM-uqvi07Z1Q4N-vUtGLRPdTvx6RaTYEnIjqwC_fOT8O4G5ZY_0mmJSuwdUDNU46/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -1044,6 +1044,7 @@ function renderSalesEntry(){
         '<div class="tcard" id="tc-custom" onclick="posType(\'Custom\')"><div class="ic">🧵</div><h3>Custom Order</h3><p>Tailoring / made-to-order with delivery date.</p></div>'+
       '</div></div>'+
     '<div id="pos-work"></div>'+
+    '<div id="pos-summary"></div>'+
     '<div class="box"><h4>🧾 Recent unrecorded sales</h4>'+
       '<div id="pos-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
         ['all|All','pending|⏳ Pending','today|🔔 Due today','tomorrow|📅 Due tomorrow','overdue|🚨 Overdue','completed|✅ Completed'].map(function(p){var x=p.split("|");return '<button class="pill'+(x[0]==="all"?" on":"")+'" data-f="'+x[0]+'" onclick="posFilter(\''+x[0]+'\')">'+x[1]+'</button>';}).join("")+
@@ -1091,15 +1092,13 @@ function renderWorkspace(){
         '<div class="row2"><div class="field"><label>Customer name</label><input id="cu-name"></div>'+
         '<div class="field"><label>Phone number</label><input id="cu-mob" inputmode="numeric"></div></div>'+
         '<div class="field"><label>Dress type / name</label><input id="cs-dress" placeholder="e.g. Lehenga blouse, 3-pc suit, saree fall…"></div>'+
-        '<div class="row3"><div class="field"><label>Total MRP (₹)</label><input id="cs-mrp" type="number" min="0" value="0" oninput="posBill()"></div>'+
-        '<div class="field"><label>Advance (₹)</label><input id="pm-adv" type="number" min="0" value="0" oninput="posBill()"></div>'+
-        '<div class="field"><label>Due amount (auto)</label><input id="pm-bal" readonly></div></div>'+
-        '<div class="row2"><div class="field"><label>Commitment date *</label><input id="dl-date" type="date" onchange="posBill()"></div>'+
-        '<div class="field"><label>Payment mode</label><select id="pm-mode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option></select></div></div>'+
-        '<div class="field"><label>Remarks (optional)</label><input id="nt-rem"></div>'+
+        '<div class="row2"><div class="field"><label>Advance taken (₹, optional)</label><input id="pm-adv" type="number" min="0" value="0"></div>'+
+        '<div class="field"><label>Commitment date *</label><input id="dl-date" type="date" onchange="posBill()"></div></div>'+
+        '<div class="row2"><div class="field"><label>Payment mode</label><select id="pm-mode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option></select></div>'+
+        '<div class="field"><label>Remarks (optional)</label><input id="nt-rem"></div></div>'+
         '<div id="dl-remind" class="desc" style="margin:6px 0"></div>'+
         '<button class="btn" onclick="posSave(\'record\')">✅ Submit order → Pending</button>'+
-        '<p class="desc" style="margin-top:8px">Order ID & date auto-generate. Fabric & stitching costs are added later when you Complete the order.</p>'+
+        '<p class="desc" style="margin-top:8px">Order ID & date auto-generate. Final amount, fabric & stitching costs are entered later when you <b>Complete</b> the order.</p>'+
       '</div>';
     posBill(); return;
   }
@@ -1195,20 +1194,20 @@ function posSave(status){
   if(!POS_TYPE)return toast('Choose sale type first','err');
   const custom=POS_TYPE==='Custom';
   if(!custom && !POS_CART.length)return toast('Cart is empty','err');
-  if(custom && posTotal()<=0)return toast('Enter Total MRP','err');
   if(custom && !val('dl-date'))return modalAlert('Commitment date is required for a custom order.','Commitment date','📦');
+  if(custom && !val('cu-name'))return toast('Enter customer name','err');
   const p={action:'saveOrder',token:tGet(),type:POS_TYPE,status:status,
     customer:val('cu-name'),mobile:val('cu-mob'),
     advance:parseFloat(val('pm-adv'))||0,paymentMode:val('pm-mode'),remarks:val('nt-rem')};
   if(custom){
-    p.dressType=val('cs-dress'); p.totalMrp=parseFloat(val('cs-mrp'))||0; p.deliveryDate=val('dl-date');
+    p.dressType=val('cs-dress'); p.deliveryDate=val('dl-date');
   } else {
     p.items=POS_CART.map(c=>({item:c.item,qty:c.qty,price:c.price})); p.discount=parseFloat(val('cs-disc'))||0;
   }
   api(p).then(d=>{
     if(!d.ok)return modalAlert(d.error,'Failed','⚠️');
     toast(d.msg,'ok'); POS_CART=[]; posLoadStats(); posLoadFeed(); renderWorkspace();
-    modalConfirm({icon:'✅',title:custom?'Order submitted':(status==='record'?'Sale recorded':'Draft saved'),message:d.order.invoice+' · '+inr(d.order.total)+(d.order.balance>0?(' · due '+inr(d.order.balance)):''),confirmText:'Print slip',cancelText:'Close',onConfirm:()=>printOrderBill(d.order)});
+    modalConfirm({icon:'✅',title:custom?'Order submitted → Pending':(status==='record'?'Sale recorded':'Draft saved'),message:d.order.invoice+(custom?(' · '+esc(d.order.customer||'')+' · due '+esc(String(d.order.deliveryDate||''))):(' · '+inr(d.order.total)+(d.order.balance>0?(' · due '+inr(d.order.balance)):''))),confirmText:'Print slip',cancelText:'Close',onConfirm:()=>printOrderBill(d.order)});
   }).catch(e=>toast(e.message,'err'));
 }
 function posPrintCurrent(){
@@ -1255,10 +1254,39 @@ function posLoadStats(silent){
 function posLoadFeed(silent){
   (silent?apiS:api)({action:'ordersFeed',token:tGet()}).then(d=>{ if(!d||!d.ok)return; POS_FEED=d.feed||[]; posRenderFeed(); }).catch(()=>{});
 }
+function posRenderSummary(){
+  if(!$('pos-summary'))return;
+  const f=POS_FEED||[];
+  const today=iso(new Date());
+  let cashCnt=0,custCnt=0,draftCnt=0,pendCnt=0,doneCnt=0;
+  let totalSales=0,advCollected=0,duePending=0,todaySales=0,custProfit=0,custCost=0;
+  f.forEach(o=>{
+    if(o.type==='Cash'){ cashCnt++; if(o.status==='Recorded'){ totalSales+=o.total; if(String(o.date||'').indexOf(today.split('-').reverse().join('-'))>=0||String(o.date||'').indexOf(today)>=0) todaySales+=o.total; } if(o.status==='Draft')draftCnt++; }
+    else { custCnt++;
+      if(o.deliveryStatus==='Pending')pendCnt++;
+      if(o.deliveryStatus==='Completed'){ doneCnt++; totalSales+=o.total; custProfit+=(o.profit||0); custCost+=(o.totalCost||0); }
+    }
+    advCollected+=(o.advance||0);
+    duePending+=(o.balance||0);
+  });
+  $('pos-summary').innerHTML=
+    '<div class="box"><h4>📊 Sales summary — unrecorded sales <span class="muted" style="font-weight:400;font-size:12px">(for accounts)</span></h4>'+
+    '<div class="cards">'+
+      statCard('Total Sales',inrS(totalSales),'cash + completed orders')+
+      statCard('Advance Collected',inrS(advCollected))+
+      statCard('Pending Dues',inrS(duePending),'to collect')+
+      statCard('Custom Profit',inrS(custProfit),'amount − cost')+
+      statCard('Cash Sales',String(cashCnt),draftCnt?(draftCnt+' draft'):'')+
+      statCard('Custom Orders',String(custCnt))+
+      statCard('Pending',String(pendCnt),'in tailoring')+
+      statCard('Completed',String(doneCnt))+
+    '</div></div>';
+}
 function posClearDate(){ if($('pos-fdate'))$('pos-fdate').value=''; posRenderFeed(); }
 function posFilter(f){ POS_FILTER=f; var p=document.querySelectorAll('#pos-pills .pill'); for(var i=0;i<p.length;i++) p[i].classList.toggle('on',p[i].getAttribute('data-f')===f); posRenderFeed(); }
 function posRenderFeed(){
   if(!$('pos-feed'))return;
+  posRenderSummary();
   const today=iso(new Date()), tm=iso(new Date(Date.now()+86400000)), fdate=val('pos-fdate');
   const cd=o=>String(o.deliveryDate||'').slice(0,10);
   let list=POS_FEED.filter(o=>{
@@ -1296,19 +1324,22 @@ function posRenderFeed(){
       act.push('<button class="icbtn dng" onclick="posDelete(\''+o.id+'\')">Del</button>');
       return [esc(o.invoice),esc(o.customer||'Walk-in'),
         '<span class="badge '+(o.type==='Custom'?'bg-Pending':'bg-Active')+'">'+esc(o.type)+'</span>',
-        detail, inr(o.total)+(o.balance>0?'<br><span style="font-size:11px;color:#ffce85">due '+inr(o.balance)+'</span>':''),
+        detail, (o.type==='Custom'&&o.deliveryStatus==='Pending'&&o.total<=0
+          ? '<span class="muted">TBD</span>'+(o.advance>0?'<br><span style="font-size:11px;color:#7fe9c0">adv '+inr(o.advance)+'</span>':'')
+          : inr(o.total)+(o.balance>0?'<br><span style="font-size:11px;color:#ffce85">due '+inr(o.balance)+'</span>':'')),
         dely, st, act.join(' ')];
     }));
 }
 function posRecord(id){ api({action:'recordOrder',token:tGet(),orderId:id}).then(d=>{toast(d.ok?d.msg:d.error,d.ok?'ok':'err');if(d.ok){posLoadFeed();posLoadStats();}}).catch(e=>toast(e.message,'err')); }
-let _COMRP=0;
+let _COADV=0;
 function posComplete(id){
-  const o=POS_FEED.find(x=>x.id===id); if(!o)return; _COMRP=o.mrp||o.total||0;
+  const o=POS_FEED.find(x=>x.id===id); if(!o)return; _COADV=o.advance||0;
   let delayDays=0, late=false;
   if(o.deliveryDate){ const cd=new Date(String(o.deliveryDate).slice(0,10)); const t=new Date(); t.setHours(0,0,0,0); cd.setHours(0,0,0,0);
     if(t>cd){ delayDays=Math.round((t-cd)/86400000); late=true; } }
   fmForm('Complete order — '+esc(o.invoice),
-    '<p class="desc" style="margin-bottom:8px">'+esc(o.dressType||'Custom')+' · MRP <b>'+inr(_COMRP)+'</b> · commit '+esc(String(o.deliveryDate||'').slice(0,10))+'</p>'+
+    '<p class="desc" style="margin-bottom:8px">'+esc(o.dressType||'Custom')+' · '+esc(o.customer||'')+' · advance paid <b>'+inr(_COADV)+'</b> · commit '+esc(String(o.deliveryDate||'').slice(0,10))+'</p>'+
+    '<div class="field"><label>Final amount to charge customer (₹) *</label><input id="co-amt" type="number" min="0" value="0" oninput="coTot()"></div>'+
     '<div class="field"><label>Fabric used</label><input id="co-fab"></div>'+
     '<div class="row3"><div class="field"><label>Fabric cost (₹)</label><input id="co-fc" type="number" min="0" value="0" oninput="coTot()"></div>'+
     '<div class="field"><label>Stitching cost (₹)</label><input id="co-sc" type="number" min="0" value="0" oninput="coTot()"></div>'+
@@ -1323,20 +1354,26 @@ function posComplete(id){
 }
 function coTot(){
   var t=(parseFloat(val('co-fc'))||0)+(parseFloat(val('co-sc'))||0)+(parseFloat(val('co-oc'))||0);
+  var amt=parseFloat(val('co-amt'))||0;
   if($('co-total'))$('co-total').textContent=inr(t);
-  if($('co-cmp')){ $('co-cmp').innerHTML = t>_COMRP
-      ? '⚠️ <b style="color:#ff97a2">Cost '+inr(t)+' exceeds MRP '+inr(_COMRP)+'</b> — loss '+inr(t-_COMRP)
-      : '✅ Profit <b style="color:#7fe9c0">'+inr(_COMRP-t)+'</b> (MRP '+inr(_COMRP)+' − cost '+inr(t)+')'; }
+  if($('co-cmp')){
+    var due=Math.max(0,amt-_COADV);
+    var prof= t>amt
+      ? '⚠️ <b style="color:#ff97a2">Cost '+inr(t)+' exceeds amount '+inr(amt)+'</b> — loss '+inr(t-amt)
+      : '✅ Profit <b style="color:#7fe9c0">'+inr(amt-t)+'</b>';
+    $('co-cmp').innerHTML = prof+' &nbsp;·&nbsp; balance due from customer <b>'+inr(due)+'</b>';
+  }
 }
 function posSaveComplete(id,late){
+  if((parseFloat(val('co-amt'))||0)<=0)return toast('Enter final amount','err');
   if(late && !val('co-reason'))return toast('Delay reason required','err');
   closeForm();
-  api({action:'completeOrder',token:tGet(),orderId:id,fabric:val('co-fab'),
+  api({action:'completeOrder',token:tGet(),orderId:id,finalAmount:parseFloat(val('co-amt'))||0,fabric:val('co-fab'),
     fabricCost:parseFloat(val('co-fc'))||0,stitchCost:parseFloat(val('co-sc'))||0,otherCost:parseFloat(val('co-oc'))||0,
     delayReason:val('co-reason')}).then(d=>{
     if(!d.ok)return modalAlert(d.error,'Cannot complete','⚠️');
     toast(d.msg,'ok'); posLoadFeed(); posLoadStats(); var s=d.summary;
-    modalAlert('Cost '+inr(s.totalCost)+' · MRP '+inr(s.mrp)+' · Profit '+inr(s.profit)+(s.delayDays>0?(' · '+s.delayDays+'d late'):' · on time'),'Order completed','✅');
+    modalAlert('Amount '+inr(s.amount)+' · cost '+inr(s.totalCost)+' · profit '+inr(s.profit)+' · balance due '+inr(s.balance)+(s.delayDays>0?(' · '+s.delayDays+'d late'):' · on time'),'Order completed','✅');
   }).catch(e=>toast(e.message,'err'));
 }
 function csvq(s){ s=String(s==null?'':s); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
