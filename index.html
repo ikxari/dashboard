@@ -107,6 +107,7 @@ body{background:var(--bg);color:var(--txt);min-height:100dvh;overflow-x:hidden}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
 .stat{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:18px}
 .stat .n{font-size:26px;font-weight:700;overflow-wrap:anywhere;line-height:1.15}
+.stat .n .kfull, .kfull{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-top:2px;letter-spacing:.2px;text-transform:none}
 .stat .l{font-size:12.5px;color:var(--muted);margin-top:3px}
 .formwrap{max-width:560px;width:100%;margin:0 auto}
 .pcard{background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:16px 18px;min-width:0}
@@ -624,7 +625,7 @@ function echEl(id,h){ var el=$(id); if(el) el.style.height=(h||320)+'px'; return
 function echInit(id,h){ var el=echEl(id,h); if(!el||typeof echarts==='undefined')return null; if(_ECH[id]){try{_ECH[id].dispose();}catch(e){}} var c=echarts.init(el,null,{renderer:'canvas'}); _ECH[id]=c; return c; }
 window.addEventListener('resize',function(){ for(var k in _ECH){ try{_ECH[k].resize();}catch(e){} } });
 var TT={backgroundColor:'rgba(20,20,32,.96)',borderColor:'rgba(124,92,255,.4)',textStyle:{color:'#eef0f7',fontFamily:'Jost'}};
-function axL(money){ return {color:'#7e8497',fontFamily:'Jost',formatter:function(v){return money?inrS(v):Number(v).toLocaleString('en-IN');}}; }
+function axL(money){ return {color:'#7e8497',fontFamily:'Jost',formatter:function(v){return money?inrShort(v):Number(v).toLocaleString('en-IN');}}; }
 /* line / area trend (multi-series) */
 function hcArea(id,cats,series){
   var c=echInit(id,300); if(!c)return;
@@ -645,7 +646,7 @@ function hbar(id,cats,data,color,money){
     yAxis:{type:'category',data:cc,axisLabel:{color:'#cfd3e2',fontFamily:'Jost',fontSize:11,width:150,overflow:'truncate'},axisLine:{lineStyle:{color:'rgba(255,255,255,.08)'}},axisTick:{show:false}},
     series:[{type:'bar',data:dd,barMaxWidth:22,
       itemStyle:{borderRadius:[0,7,7,0],shadowBlur:10,shadowColor:'rgba(124,92,255,.25)',shadowOffsetX:2,color:color||new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#9a7cff'},{offset:1,color:'#46b5ff'}])},
-      label:{show:true,position:'right',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrS(p.value):Number(p.value).toLocaleString('en-IN');}}}],
+      label:{show:true,position:'right',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrShort(p.value):Number(p.value).toLocaleString('en-IN');}}}],
     animationDuration:900,animationEasing:'cubicOut',animationDelay:function(i){return i*40;} });
 }
 /* ranked horizontal bar (#1, #2 …) */
@@ -659,7 +660,7 @@ function hcColumn(id,cats,data,color,money){
     xAxis:{type:'category',data:cats,axisLabel:{color:'#9aa0b4',fontFamily:'Jost',rotate:(cats.length||0)>8?38:0,hideOverlap:true},axisLine:{lineStyle:{color:'rgba(255,255,255,.12)'}}},
     yAxis:{type:'value',axisLabel:axL(money),splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
     series:[{type:'bar',data:data.map(function(x){return Math.round(x);}),barMaxWidth:42,itemStyle:{borderRadius:[7,7,0,0],shadowBlur:10,shadowColor:'rgba(124,92,255,.28)',shadowOffsetY:-2,color:color||new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#b39bff'},{offset:1,color:'#5b3fd6'}])},
-      label:{show:true,position:'top',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrS(p.value):Number(p.value).toLocaleString('en-IN');}}}],
+      label:{show:true,position:'top',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrShort(p.value):Number(p.value).toLocaleString('en-IN');}}}],
     animationDuration:900,animationEasing:'elasticOut',animationDelay:function(i){return i*50;} });
 }
 /* flat pie/donut — only for <=5 categories (GST rates) */
@@ -668,14 +669,14 @@ function hcPie3D(id,labels,data,money){
   var pts=labels.map(function(l,i){return {name:l,value:Math.round(data[i])};});
   c.setOption({ tooltip:Object.assign({trigger:'item',formatter:function(p){return p.name+': <b>'+(money?inr(p.value):p.value)+'</b> ('+p.percent+'%)';}},TT),
     legend:{bottom:0,textStyle:{color:'#cfd3e2',fontFamily:'Jost'}}, color:HC_COLORS,
-    series:[{type:'pie',radius:['42%','70%'],center:['50%','46%'],data:pts,label:{color:'#cfd3e2',fontFamily:'Jost',formatter:function(p){return money?inrS(p.value):p.value;}},itemStyle:{borderColor:'rgba(7,7,16,.6)',borderWidth:2}}] });
+    series:[{type:'pie',radius:['42%','70%'],center:['50%','46%'],data:pts,label:{color:'#cfd3e2',fontFamily:'Jost',formatter:function(p){return money?inrShort(p.value):p.value;}},itemStyle:{borderColor:'rgba(7,7,16,.6)',borderWidth:2}}] });
 }
 /* treemap (inventory value distribution) */
 function echTreemap(id,data){
   var c=echInit(id,360); if(!c)return;
   c.setOption({ tooltip:Object.assign({formatter:function(p){return p.name+'<br/><b>'+inr(p.value)+'</b>';}},TT),
     series:[{type:'treemap',roam:false,nodeClick:false,breadcrumb:{show:false},data:data.map(function(d){return {name:d.name,value:Math.round(d.value)};}),
-      label:{color:'#fff',fontFamily:'Jost',fontSize:11,formatter:function(p){return p.name+'\n'+inrS(p.value);}},
+      label:{color:'#fff',fontFamily:'Jost',fontSize:11,formatter:function(p){return p.name+'\n'+inrShort(p.value);}},
       levels:[{itemStyle:{borderColor:'rgba(7,7,16,.6)',borderWidth:2,gapWidth:2}}], color:HC_COLORS}] });
 }
 function echHist(id,labels,counts){ hcColumn(id,labels,counts,'#46b5ff',false); }
@@ -1845,6 +1846,15 @@ function boot(){
   api({action:'session',token:t}).then(d=>{ if(d.ok)enterApp(d.user); else {tClr();show('login');} }).catch(()=>show('login'));
 }
 boot();
+
+/* ---- KPI money: abbreviated + full number underneath ---- */
+function inrShort(n){ n=n||0; var a=Math.abs(n);
+  if(a>=1e7) return '₹'+(n/1e7).toFixed(2)+' Cr';
+  if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+' L';
+  if(a>=1e3) return '₹'+(n/1e3).toFixed(1)+'k';
+  return '₹'+Math.round(n); }
+function inrS(n){ return inrShort(n)+'<span class="kfull">'+inr(n)+'</span>'; }
+
 </script>
 </body>
 </html>
