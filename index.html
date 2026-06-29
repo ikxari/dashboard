@@ -405,7 +405,7 @@ function tSet(t){try{localStorage.setItem('ikxari_token',t)}catch(e){}}
 function tClr(){try{localStorage.removeItem('ikxari_token')}catch(e){}}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function $(id){return document.getElementById(id)}
-function val(id){return ($(id).value||'').trim()}
+function val(id){var e=$(id);return e?((e.value||'')+'').trim():'';}
 function tpw(btn){var i=btn.parentElement.querySelector('input');if(i.type==='password'){i.type='text';btn.textContent='🙈';}else{i.type='password';btn.textContent='👁';}}
 
 function toast(msg,type){const t=$('toast');t.textContent=msg;t.className='toast show '+(type||'');setTimeout(()=>t.className='toast '+(type||''),3200);}
@@ -1164,7 +1164,7 @@ function renderCart(){
 /* ----- totals + live bill ----- */
 function posCashSub(){ let s=0; POS_CART.forEach(c=>s+=c.qty*c.price); return s; }
 function posTotal(){
-  if(POS_TYPE==='Custom'){ return parseFloat(val('cs-mrp'))||0; }
+  if(POS_TYPE==='Custom'){ return 0; }
   return Math.max(0, posCashSub()-(parseFloat(val('cs-disc'))||0));
 }
 function posBill(){
