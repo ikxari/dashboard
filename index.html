@@ -387,7 +387,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbxyd3kqCk5hY0RK5ImaGt-H7J8hW0oItxCreNh21djmtBvcL0ayMnVWIBguRLAd98zh/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbxcpyEnQQSB7AzJqG6D2ZBQ2SA4s8dXyqx6oQWzT0XmLb3b-l1pqTtcBGcUzoRVfg0e/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -957,18 +957,20 @@ let PCART=[], PFEED=[];
 function renderPurchaseEntry(){
   PCART=[];
   setContent(pagehead('Unrecorded Purchase','Add many items in one go, then push to stock','purchase_entry')+
-    '<div class="formwrap"><div class="box"><h4>➕ Add items to purchase</h4>'+
-      '<div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
-      '<div class="field"><label>Item name</label><input id="pe-item" placeholder="e.g. HAND CLUTCH MRP2350"></div>'+
-      '<div class="row2"><div class="field"><label>Purchase cost / item (₹)</label><input id="pe-cost" type="number" inputmode="decimal" oninput="peAmt()" placeholder="0"></div>'+
-      '<div class="field"><label>Purchase qty</label><input id="pe-qty" type="number" inputmode="numeric" min="1" oninput="peAmt()" placeholder="0"></div></div>'+
-      '<div class="row2"><div class="field"><label>Amount (auto)</label><input id="pe-amt" readonly placeholder="₹0"></div>'+
+    '<div class="box"><h4>➕ Add items to purchase</h4>'+
+      '<div class="row2"><div class="field"><label>Distributor name</label><input id="pe-dist" placeholder="e.g. Purse Cafe"></div>'+
+      '<div class="field"><label>Item name</label><input id="pe-item" placeholder="e.g. HAND CLUTCH MRP2350"></div></div>'+
+      '<div class="row3"><div class="field"><label>Purchase cost / item (₹)</label><input id="pe-cost" type="number" inputmode="decimal" oninput="peAmt()" placeholder="0"></div>'+
+      '<div class="field"><label>Purchase qty</label><input id="pe-qty" type="number" inputmode="numeric" min="1" oninput="peAmt()" placeholder="0"></div>'+
       '<div class="field"><label>Selling price / item (₹)</label><input id="pe-sell" type="number" inputmode="decimal" placeholder="0"></div></div>'+
-      '<button class="btn ghost" onclick="addPCart()">+ Add item to list</button>'+
+      '<div class="row2"><div class="field"><label>Amount (auto)</label><input id="pe-amt" readonly placeholder="₹0"></div>'+
+      '<div class="field" style="display:flex;align-items:flex-end"><button class="btn ghost" style="width:100%" onclick="addPCart()">+ Add item to list</button></div></div>'+
       '<div id="pe-cart" style="margin-top:14px"></div>'+
-    '</div></div>'+
-    '<div class="box"><h4>📦 Quick stock snapshot</h4><div id="pe-stockmini">'+loadingBox()+'</div></div>'+
-    '<div class="box"><h4>🧾 Recent purchases (by invoice)</h4><div id="pe-feed">'+loadingBox()+'</div></div>');
+    '</div>'+
+    '<div class="grid2">'+
+      '<div class="box"><h4>📦 Quick stock snapshot</h4><div id="pe-stockmini">'+loadingBox()+'</div></div>'+
+      '<div class="box"><h4>🧾 Recent purchases (by invoice)</h4><div id="pe-feed">'+loadingBox()+'</div></div>'+
+    '</div>');
   renderPCart(); loadPurchaseFeed(); loadStockMini();
   startAutoRefresh(()=>{ loadPurchaseFeed(true); loadStockMini(true); });
 }
@@ -981,6 +983,20 @@ function addPCart(){
   renderPCart();
 }
 function rmPCart(i){ PCART.splice(i,1); renderPCart(); }
+function loadStockMini(silent){
+  if(!$('pe-stockmini'))return;
+  (silent?apiS:api)({action:'stockList',token:tGet()}).then(d=>{
+    if(!d||!d.ok){ if(!silent)$('pe-stockmini').innerHTML=errBox(d); return; }
+    var inv=d.inventory||[], k=d.kpis||{};
+    var low=inv.filter(m=>m.current<=2).sort((a,b)=>a.current-b.current).slice(0,12);
+    $('pe-stockmini').innerHTML=
+      '<div class="cards">'+
+        statCard('Items',k.items)+statCard('Units',k.units)+statCard('Stock value',inrS(k.stockValue))+statCard('Low stock',k.low,'≤2 left')+
+      '</div>'+
+      (low.length?('<p class="desc" style="margin:10px 0 4px">⚠️ Low / out of stock</p>'+tbl(['Item','Left','Sell'],
+        low.map(m=>[esc(m.item),'<b style="color:'+(m.current<=0?'#ff97a2':'#ffce85')+'">'+m.current+'</b>',inr(m.sell)]))):'<p class="desc">All items well stocked 👍</p>');
+  }).catch(e=>{ if(!silent)$('pe-stockmini').innerHTML=connBox(e); });
+}
 function renderPCart(){
   if(!PCART.length){ $('pe-cart').innerHTML='<p class="desc">No items added yet. Add items above, then push to stock.</p>'; return; }
   let h=tbl(['#','Item','Type','Cost','Qty','Amount','Sell','—'],
@@ -1163,7 +1179,7 @@ function renderCart(){
       '<td><button class="icbtn dng" onclick="posRemove('+i+')">✕</button></td></tr>';
   });
   h+='</tbody></table>'+
-    '<div class="field" style="margin-top:10px"><label>Discount (₹)</label><input id="cs-disc" type="number" min="0" value="0" oninput="posBill()"></div>';
+    '<div class="field" style="margin-top:10px"><label>Discount (₹)</label><input id="cs-disc" type="number" min="0" value="'+(parseFloat(val('cs-disc'))||0)+'" oninput="posBill()"></div>';
   box.innerHTML=h;
 }
 /* ----- totals + live bill ----- */
@@ -1181,6 +1197,8 @@ function posBill(){
     $('dl-remind').innerHTML = (bal>0?('🔔 <b style="color:#ffce85">Balance ₹'+Math.round(bal).toLocaleString('en-IN')+'</b> on delivery. '):'✅ Fully paid. ')+(dd?('Commit: '+dd):''); }
   const bx=$('pos-bill'); if(!bx)return;
   const custom=POS_TYPE==='Custom';
+  const disc=parseFloat(val('cs-disc'))||0;
+  const sub=custom?total:posCashSub();
   let lines = custom
     ? [{item:(val('cs-dress')||'Custom order'),qty:1,price:total}]
     : POS_CART.map(c=>({item:c.item,qty:c.qty,price:c.price}));
@@ -1190,7 +1208,9 @@ function posBill(){
     '<table style="width:100%;font-size:13px"><tbody>'+
     lines.map(l=>'<tr><td>'+esc(l.item)+'</td><td style="text-align:center">'+l.qty+'</td><td style="text-align:right">'+inr(l.qty*l.price)+'</td></tr>').join('')+
     '</tbody></table>'+
-    '<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--brd);margin-top:8px;padding-top:8px;font-size:17px;font-weight:700"><span>Total</span><span>'+inr(total)+'</span></div>'+
+    (disc>0?'<div style="display:flex;justify-content:space-between;font-size:13px;border-top:1px dashed var(--brd);margin-top:8px;padding-top:6px"><span class="desc">Subtotal</span><span>'+inr(sub)+'</span></div>'+
+            '<div style="display:flex;justify-content:space-between;font-size:13px;color:#7fe9c0"><span>Discount</span><span>− '+inr(disc)+'</span></div>':'')+
+    '<div style="display:flex;justify-content:space-between;border-top:1px '+(disc>0?'solid':'dashed')+' var(--brd);margin-top:'+(disc>0?'4px':'8px')+';padding-top:8px;font-size:17px;font-weight:700"><span>Total</span><span>'+inr(total)+'</span></div>'+
     (adv>0?'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px"><span class="desc">Advance</span><span>'+inr(adv)+'</span></div>':'')+
     (bal>0?'<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:#ffce85"><span>Balance</span><span>'+inr(bal)+'</span></div>':'');
 }
@@ -1230,7 +1250,7 @@ function printOrderBill(o){
     '<div class="h"><div class="b">Ikxari</div><div class="t">Your X Factor in Luxury</div></div>'+
     '<div class="row"><span>'+o.invoice+'</span><span>'+(o.date||'')+'</span></div>'+
     '<div class="row"><span>Customer</span><span>'+((o.customer||'Walk-in'))+'</span></div>'+
-    '<table><tbody>'+(o.items||[]).map(l=>'<tr><td>'+l.item+'</td><td style="text-align:center">'+l.qty+'</td><td style="text-align:right">₹'+Math.round(l.qty*l.price)+'</td></tr>').join('')+'</tbody></table>'+
+    '<table><tbody>'+(o.items||[]).map(l=>'<tr><td>'+l.item+'</td><td style="text-align:center">×'+l.qty+'</td><td style="text-align:right">'+(l.price>0?'₹'+Math.round(l.qty*l.price):'')+'</td></tr>').join('')+'</tbody></table>'+
     '<div class="tot"><span>Total</span><span>₹'+Math.round(o.total).toLocaleString('en-IN')+'</span></div>'+
     (o.advance>0?'<div class="row"><span>Advance</span><span>₹'+Math.round(o.advance).toLocaleString('en-IN')+'</span></div>':'')+
     (o.balance>0?'<div class="row" style="font-weight:700;color:#b8860b"><span>Balance due</span><span>₹'+Math.round(o.balance).toLocaleString('en-IN')+'</span></div>':'')+
