@@ -1062,6 +1062,7 @@ function renderSalesEntry(){
       '</div></div>'+
     '<div id="pos-work"></div>'):'')+
     '<div id="pos-summary"></div>'+
+    (creator?'':'<div id="pos-staff"></div>')+
     '<div class="box"><h4>↩️ Sale Return</h4>'+
       '<p class="desc" style="margin-bottom:8px">Enter the invoice / order ID — the original sale & date will be fetched.</p>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sr-ref" placeholder="e.g. INV-0007 / ORD-00012" style="flex:1;min-width:160px;margin:0">'+
@@ -1280,6 +1281,23 @@ function posLoadStats(silent){
 function posLoadFeed(silent){
   (silent?apiS:api)({action:'ordersFeed',token:tGet()}).then(d=>{ if(!d||!d.ok)return; POS_FEED=d.feed||[]; posRenderFeed(); }).catch(()=>{});
 }
+function posRenderStaff(){
+  if(!$('pos-staff'))return;
+  const map={}, tot={};
+  (POS_FEED||[]).forEach(o=>{
+    const by=o.by||'—'; const dt=(String(o.date||'').split(' ')[0])||'—'; const amt=o.total||0;
+    const k=by+'||'+dt;
+    map[k]=map[k]||{by:by,date:dt,count:0,amount:0,cash:0,custom:0};
+    map[k].count++; map[k].amount+=amt; if(o.type==='Cash')map[k].cash++; else map[k].custom++;
+    tot[by]=tot[by]||{count:0,amount:0}; tot[by].count++; tot[by].amount+=amt;
+  });
+  let rows=Object.keys(map).map(k=>map[k]).sort((a,b)=> a.by===b.by ? (a.date<b.date?1:-1) : (a.by<b.by?-1:1));
+  if(!rows.length){ $('pos-staff').innerHTML=''; return; }
+  $('pos-staff').innerHTML='<div class="box"><h4>👥 Sales by salesboy — date-wise</h4>'+
+    '<div class="cards">'+Object.keys(tot).map(k=>statCard(k,inr(tot[k].amount),tot[k].count+' sales')).join('')+'</div>'+
+    tbl(['Salesboy','Date','Cash','Custom','Total sales','Amount'],
+      rows.map(r=>[esc(r.by),r.date,r.cash,r.custom,r.count,inr(r.amount)]))+'</div>';
+}
 function posRenderSummary(){
   if(!$('pos-summary'))return;
   const f=POS_FEED||[];
@@ -1343,7 +1361,7 @@ function posClearDate(){ if($('pos-fdate'))$('pos-fdate').value=''; posRenderFee
 function posFilter(f){ POS_FILTER=f; var p=document.querySelectorAll('#pos-pills .pill'); for(var i=0;i<p.length;i++) p[i].classList.toggle('on',p[i].getAttribute('data-f')===f); posRenderFeed(); }
 function posRenderFeed(){
   if(!$('pos-feed'))return;
-  posRenderSummary();
+  posRenderSummary(); posRenderStaff();
   const today=iso(new Date()), tm=iso(new Date(Date.now()+86400000)), fdate=val('pos-fdate');
   const cd=o=>String(o.deliveryDate||'').slice(0,10);
   let list=POS_FEED.filter(o=>{
