@@ -389,7 +389,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbxcpyEnQQSB7AzJqG6D2ZBQ2SA4s8dXyqx6oQWzT0XmLb3b-l1pqTtcBGcUzoRVfg0e/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbwwYlAtSG9DfBDxanyv5NU76gTWRnGh9V4dM1T5pcivWhHtB7uSATE6mislPQJEZA/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -1048,7 +1048,7 @@ function editPLine(id){
 }
 /* ========== UNRECORDED SALES — POS workspace ========== */
 /* ========== UNRECORDED SALES — POS workspace (tailoring upgrade) ========== */
-let POS_TYPE='', POS_CART=[], POS_STOCK=[], POS_FEED=[], POS_FILTER='all';
+let POS_TYPE='', POS_CART=[], POS_STOCK=[], POS_FEED=[], POS_FILTER='all', POS_DFROM='', POS_DTO='';
 const WF=['Pending','In Cutting','In Stitching','Ready','Delivered','Cancelled'];
 const DRESS=['Shirt','Pant','Suit','Blouse','Kurti','Saree Work','Custom'];
 function renderSalesEntry(){
@@ -1057,6 +1057,16 @@ function renderSalesEntry(){
   setContent(pagehead('Unrecorded Sales', creator?'Fast entry for sales boys — cash sale or custom tailoring order':'All sales overview — cash sales & custom orders','sales_entry')+
     '<div id="pos-kpi">'+loadingBox()+'</div>'+
     '<div id="pos-rem"></div>'+
+    '<div class="box" style="padding:12px 16px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+
+      '<b style="font-size:13px">📅 Sale date</b>'+
+      '<input type="date" id="pos-dfrom" onchange="posSaleRange()" style="margin:0;width:auto">'+
+      '<span class="desc">to</span>'+
+      '<input type="date" id="pos-dto" onchange="posSaleRange()" style="margin:0;width:auto">'+
+      '<button class="pill" onclick="posSaleQuick(0)">Today</button>'+
+      '<button class="pill" onclick="posSaleQuick(6)">7 days</button>'+
+      '<button class="pill" onclick="posSaleQuick(29)">30 days</button>'+
+      '<button class="btn ghost sm" onclick="posSaleClear()">✕ All time</button>'+
+    '</div></div>'+
     (creator?('<div class="box"><h4>Sale type</h4>'+
       '<div class="postype">'+
         '<div class="tcard" id="tc-cash" onclick="posType(\'Cash\')"><div class="ic">💵</div><h3>Cash Sale</h3><p>Ready stock product. Fast billing.</p></div>'+
@@ -1283,10 +1293,16 @@ function posLoadStats(silent){
 function posLoadFeed(silent){
   (silent?apiS:api)({action:'ordersFeed',token:tGet()}).then(d=>{ if(!d||!d.ok)return; POS_FEED=d.feed||[]; posRenderFeed(); }).catch(()=>{});
 }
+function posInRange(o){ var d=o.dateISO||String(o.date||'').slice(0,10); if(POS_DFROM && d<POS_DFROM)return false; if(POS_DTO && d>POS_DTO)return false; return true; }
+function posSaleRange(){ POS_DFROM=val('pos-dfrom'); POS_DTO=val('pos-dto'); posRenderFeed(); }
+function posSaleQuick(days){ var t=new Date(), f=new Date(Date.now()-days*86400000);
+  POS_DTO=iso(t); POS_DFROM=iso(f);
+  if($('pos-dfrom'))$('pos-dfrom').value=POS_DFROM; if($('pos-dto'))$('pos-dto').value=POS_DTO; posRenderFeed(); }
+function posSaleClear(){ POS_DFROM=''; POS_DTO=''; if($('pos-dfrom'))$('pos-dfrom').value=''; if($('pos-dto'))$('pos-dto').value=''; posRenderFeed(); }
 function posRenderStaff(){
   if(!$('pos-staff'))return;
   const map={}, tot={};
-  (POS_FEED||[]).forEach(o=>{
+  (POS_FEED||[]).filter(posInRange).forEach(o=>{
     const by=o.by||'—'; const dt=(String(o.date||'').split(' ')[0])||'—'; const amt=o.total||0;
     const k=by+'||'+dt;
     map[k]=map[k]||{by:by,date:dt,count:0,amount:0,cash:0,custom:0};
@@ -1302,7 +1318,7 @@ function posRenderStaff(){
 }
 function posRenderSummary(){
   if(!$('pos-summary'))return;
-  const f=POS_FEED||[];
+  const f=(POS_FEED||[]).filter(posInRange);
   const today=iso(new Date());
   let cashCnt=0,custCnt=0,draftCnt=0,pendCnt=0,doneCnt=0;
   let totalSales=0,advCollected=0,duePending=0,todaySales=0,custProfit=0,custCost=0;
@@ -1366,7 +1382,7 @@ function posRenderFeed(){
   posRenderSummary(); posRenderStaff();
   const today=iso(new Date()), tm=iso(new Date(Date.now()+86400000)), fdate=val('pos-fdate');
   const cd=o=>String(o.deliveryDate||'').slice(0,10);
-  let list=POS_FEED.filter(o=>{
+  let list=POS_FEED.filter(posInRange).filter(o=>{
     if(POS_FILTER==='pending')   return o.type==='Custom'&&o.deliveryStatus==='Pending';
     if(POS_FILTER==='completed') return o.deliveryStatus==='Completed';
     if(POS_FILTER==='today')     return o.type==='Custom'&&o.deliveryStatus==='Pending'&&cd(o)===today;
