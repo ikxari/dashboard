@@ -510,7 +510,7 @@ const TABS=[
 ];
 /* role-based visibility: Accountant→Purchase Entry + Inventory, Sales Exec→Sales Entry */
 function canSee(id){
-  if(ME.role==='Accountant')      return ['purchase_entry','inventory','settings'].indexOf(id)>=0;
+  if(ME.role==='Accountant')      return ['sales_entry','purchase_entry','inventory','gst','expense','reports','settings'].indexOf(id)>=0;
   if(ME.role==='Sales Executive') return ['sales_entry','settings'].indexOf(id)>=0;
   const t=TABS.find(x=>x.id===id); return t? ME.rank>=t.rank : false;
 }
@@ -1051,22 +1051,23 @@ const WF=['Pending','In Cutting','In Stitching','Ready','Delivered','Cancelled']
 const DRESS=['Shirt','Pant','Suit','Blouse','Kurti','Saree Work','Custom'];
 function renderSalesEntry(){
   POS_TYPE=''; POS_CART=[];
-  setContent(pagehead('Unrecorded Sales','Fast entry for sales boys — cash sale or custom tailoring order','sales_entry')+
+  const creator = ['Sales Executive','Admin','Super Admin','Manager'].indexOf(ME.role)>=0;
+  setContent(pagehead('Unrecorded Sales', creator?'Fast entry for sales boys — cash sale or custom tailoring order':'All sales overview — cash sales & custom orders','sales_entry')+
     '<div id="pos-kpi">'+loadingBox()+'</div>'+
     '<div id="pos-rem"></div>'+
-    '<div class="box"><h4>Sale type</h4>'+
+    (creator?('<div class="box"><h4>Sale type</h4>'+
       '<div class="postype">'+
         '<div class="tcard" id="tc-cash" onclick="posType(\'Cash\')"><div class="ic">💵</div><h3>Cash Sale</h3><p>Ready stock product. Fast billing.</p></div>'+
         '<div class="tcard" id="tc-custom" onclick="posType(\'Custom\')"><div class="ic">🧵</div><h3>Custom Order</h3><p>Tailoring / made-to-order with delivery date.</p></div>'+
       '</div></div>'+
-    '<div id="pos-work"></div>'+
+    '<div id="pos-work"></div>'):'')+
     '<div id="pos-summary"></div>'+
     '<div class="box"><h4>↩️ Sale Return</h4>'+
       '<p class="desc" style="margin-bottom:8px">Enter the invoice / order ID — the original sale & date will be fetched.</p>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sr-ref" placeholder="e.g. INV-0007 / ORD-00012" style="flex:1;min-width:160px;margin:0">'+
       '<button class="btn sm" onclick="saleSearch()">🔎 Fetch sale</button></div>'+
       '<div id="sr-result" style="margin-top:12px"></div></div>'+
-    '<div class="box"><h4>🧾 Recent unrecorded sales</h4>'+
+    '<div class="box"><h4>🧾 '+(creator?'Recent unrecorded sales':'All sales (cash & custom)')+'</h4>'+
       '<div id="pos-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
         ['all|All','pending|⏳ Pending','today|🔔 Due today','tomorrow|📅 Due tomorrow','overdue|🚨 Overdue','completed|✅ Completed'].map(function(p){var x=p.split("|");return '<button class="pill'+(x[0]==="all"?" on":"")+'" data-f="'+x[0]+'" onclick="posFilter(\''+x[0]+'\')">'+x[1]+'</button>';}).join("")+
       '</div>'+
