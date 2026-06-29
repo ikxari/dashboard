@@ -387,7 +387,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbwuGFVq08uFUZbBfv76SUfkwpn-gYDH_txzJgjPJ-PkrttYwvn4-j2Nj49CqBmPKWwX/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbxyd3kqCk5hY0RK5ImaGt-H7J8hW0oItxCreNh21djmtBvcL0ayMnVWIBguRLAd98zh/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -492,7 +492,7 @@ const TABS=[
   {id:'sales',    label:'Sales Analytics', rank:1},
   {id:'returns',  label:'Sales Return',     rank:1},
   {id:'purchase_entry', label:'Unrecorded Purchase', rank:4},
-  {id:'sales_entry',    label:'Unrecorded Sales',    rank:4},
+  {id:'sales_entry',    label:'Unrecorded Sales',    rank:2},
   {id:'inventory',label:'Inventory',       rank:1},
   {id:'itemanalysis', label:'Item Analysis', rank:4},
   {id:'ims',      label:'IMS Center',      rank:1, soon:true},
@@ -1045,6 +1045,11 @@ function renderSalesEntry(){
       '</div></div>'+
     '<div id="pos-work"></div>'+
     '<div id="pos-summary"></div>'+
+    '<div class="box"><h4>↩️ Sale Return</h4>'+
+      '<p class="desc" style="margin-bottom:8px">Enter the invoice / order ID — the original sale & date will be fetched.</p>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="sr-ref" placeholder="e.g. INV-0007 / ORD-00012" style="flex:1;min-width:160px;margin:0">'+
+      '<button class="btn sm" onclick="saleSearch()">🔎 Fetch sale</button></div>'+
+      '<div id="sr-result" style="margin-top:12px"></div></div>'+
     '<div class="box"><h4>🧾 Recent unrecorded sales</h4>'+
       '<div id="pos-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
         ['all|All','pending|⏳ Pending','today|🔔 Due today','tomorrow|📅 Due tomorrow','overdue|🚨 Overdue','completed|✅ Completed'].map(function(p){var x=p.split("|");return '<button class="pill'+(x[0]==="all"?" on":"")+'" data-f="'+x[0]+'" onclick="posFilter(\''+x[0]+'\')">'+x[1]+'</button>';}).join("")+
@@ -1282,6 +1287,37 @@ function posRenderSummary(){
       statCard('Completed',String(doneCnt))+
     '</div></div>';
 }
+function saleSearch(){
+  const ref=val('sr-ref'); if(!ref)return toast('Enter invoice / order ID','err');
+  $('sr-result').innerHTML=loadingBox();
+  api({action:'saleLookup',token:tGet(),ref:ref}).then(d=>{
+    if(!d.ok)return($('sr-result').innerHTML='<p class="desc" style="color:#ff97a2">'+esc(d.error)+'</p>');
+    if(d.kind==='Cash'){
+      $('sr-result').innerHTML='<div class="totbar"><span>🧾 '+esc(d.ref)+' · Cash sale · '+esc(d.date)+'</span><span>'+inr(d.total)+'</span></div>'+
+        tbl(['Item','Sold','Returned','Returnable','Action'],
+          d.items.map(it=>[esc(it.item),it.qty,it.returned,'<b>'+it.available+'</b>',
+            it.available>0?'<button class="icbtn" onclick="saleDoReturn(\''+esc(d.ref)+'\',\''+esc(it.item).replace(/'/g,"\\'")+'\','+it.available+')">Return</button>':'<span class="muted">—</span>']));
+    } else {
+      $('sr-result').innerHTML='<div class="totbar"><span>🧵 '+esc(d.ref)+' · Custom order · '+esc(d.date)+'</span><span>'+inr(d.total)+'</span></div>'+
+        '<p class="desc">Customer: <b>'+esc(d.customer||'—')+'</b> · '+esc(d.dressType||'')+' · status: '+esc(d.status||'')+(d.deliveryDate?(' · commit '+esc(d.deliveryDate)):'')+'</p>'+
+        '<p class="desc">Custom tailoring orders don\'t restock — to cancel/refund, handle the balance via the order\'s Pay/▣ actions.</p>';
+    }
+  }).catch(e=>$('sr-result').innerHTML=connBox(e));
+}
+function saleDoReturn(ref,item,max){
+  fmForm('Return — '+esc(item),
+    '<p class="desc" style="margin-bottom:8px">From '+esc(ref)+' · returnable: <b>'+max+'</b></p>'+
+    '<div class="field"><label>Return qty</label><input id="rt-qty" type="number" min="1" max="'+max+'" value="'+max+'"></div>'+
+    '<button class="btn" onclick="saleReturnGo(\''+esc(ref)+'\',\''+esc(item).replace(/'/g,"\\'")+'\','+max+')">↩️ Confirm return</button>');
+}
+function saleReturnGo(ref,item,max){
+  const q=parseFloat(val('rt-qty'))||0; if(q<=0||q>max)return toast('Qty 1–'+max,'err');
+  closeForm();
+  api({action:'saleReturn',token:tGet(),refInvoice:ref,item:item,qty:q}).then(d=>{
+    if(!d.ok)return modalAlert(d.error,'Return failed','⚠️');
+    toast(d.msg,'ok'); saleSearch(); posLoadStats();
+  }).catch(e=>toast(e.message,'err'));
+}
 function posClearDate(){ if($('pos-fdate'))$('pos-fdate').value=''; posRenderFeed(); }
 function posFilter(f){ POS_FILTER=f; var p=document.querySelectorAll('#pos-pills .pill'); for(var i=0;i<p.length;i++) p[i].classList.toggle('on',p[i].getAttribute('data-f')===f); posRenderFeed(); }
 function posRenderFeed(){
@@ -1340,6 +1376,7 @@ function posComplete(id){
   fmForm('Complete order — '+esc(o.invoice),
     '<p class="desc" style="margin-bottom:8px">'+esc(o.dressType||'Custom')+' · '+esc(o.customer||'')+' · advance paid <b>'+inr(_COADV)+'</b> · commit '+esc(String(o.deliveryDate||'').slice(0,10))+'</p>'+
     '<div class="field"><label>Final amount to charge customer (₹) *</label><input id="co-amt" type="number" min="0" value="0" oninput="coTot()"></div>'+
+    '<div class="field"><label>Discount (₹, optional)</label><input id="co-disc" type="number" min="0" value="0" oninput="coTot()"></div>'+
     '<div class="field"><label>Fabric used</label><input id="co-fab"></div>'+
     '<div class="row3"><div class="field"><label>Fabric cost (₹)</label><input id="co-fc" type="number" min="0" value="0" oninput="coTot()"></div>'+
     '<div class="field"><label>Stitching cost (₹)</label><input id="co-sc" type="number" min="0" value="0" oninput="coTot()"></div>'+
@@ -1354,26 +1391,26 @@ function posComplete(id){
 }
 function coTot(){
   var t=(parseFloat(val('co-fc'))||0)+(parseFloat(val('co-sc'))||0)+(parseFloat(val('co-oc'))||0);
-  var amt=parseFloat(val('co-amt'))||0;
+  var amt=parseFloat(val('co-amt'))||0, disc=parseFloat(val('co-disc'))||0, net=Math.max(0,amt-disc);
   if($('co-total'))$('co-total').textContent=inr(t);
   if($('co-cmp')){
-    var due=Math.max(0,amt-_COADV);
-    var prof= t>amt
-      ? '⚠️ <b style="color:#ff97a2">Cost '+inr(t)+' exceeds amount '+inr(amt)+'</b> — loss '+inr(t-amt)
-      : '✅ Profit <b style="color:#7fe9c0">'+inr(amt-t)+'</b>';
-    $('co-cmp').innerHTML = prof+' &nbsp;·&nbsp; balance due from customer <b>'+inr(due)+'</b>';
+    var due=Math.max(0,net-_COADV);
+    var prof= t>net
+      ? '⚠️ <b style="color:#ff97a2">Cost '+inr(t)+' exceeds net '+inr(net)+'</b> — loss '+inr(t-net)
+      : '✅ Profit <b style="color:#7fe9c0">'+inr(net-t)+'</b>';
+    $('co-cmp').innerHTML = (disc>0?('Net charged <b>'+inr(net)+'</b> (after '+inr(disc)+' disc) &nbsp;·&nbsp; '):'')+prof+' &nbsp;·&nbsp; balance due <b>'+inr(due)+'</b>';
   }
 }
 function posSaveComplete(id,late){
   if((parseFloat(val('co-amt'))||0)<=0)return toast('Enter final amount','err');
   if(late && !val('co-reason'))return toast('Delay reason required','err');
   closeForm();
-  api({action:'completeOrder',token:tGet(),orderId:id,finalAmount:parseFloat(val('co-amt'))||0,fabric:val('co-fab'),
+  api({action:'completeOrder',token:tGet(),orderId:id,finalAmount:parseFloat(val('co-amt'))||0,discount:parseFloat(val('co-disc'))||0,fabric:val('co-fab'),
     fabricCost:parseFloat(val('co-fc'))||0,stitchCost:parseFloat(val('co-sc'))||0,otherCost:parseFloat(val('co-oc'))||0,
     delayReason:val('co-reason')}).then(d=>{
     if(!d.ok)return modalAlert(d.error,'Cannot complete','⚠️');
     toast(d.msg,'ok'); posLoadFeed(); posLoadStats(); var s=d.summary;
-    modalAlert('Amount '+inr(s.amount)+' · cost '+inr(s.totalCost)+' · profit '+inr(s.profit)+' · balance due '+inr(s.balance)+(s.delayDays>0?(' · '+s.delayDays+'d late'):' · on time'),'Order completed','✅');
+    modalAlert('Net '+inr(s.amount)+(s.discount>0?(' (disc '+inr(s.discount)+')'):'')+' · cost '+inr(s.totalCost)+' · profit '+inr(s.profit)+' · balance due '+inr(s.balance)+(s.delayDays>0?(' · '+s.delayDays+'d late'):' · on time'),'Order completed','✅');
   }).catch(e=>toast(e.message,'err'));
 }
 function csvq(s){ s=String(s==null?'':s); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
