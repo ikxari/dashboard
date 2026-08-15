@@ -446,7 +446,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbwwYlAtSG9DfBDxanyv5NU76gTWRnGh9V4dM1T5pcivWhHtB7uSATE6mislPQJEZA/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbyhKCW0Nz-mODUEhditEk-g_FvJ63caVY_yl0iGnksBMEhCT5GU8qKXHaurxSLdRE5s/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -1624,8 +1624,25 @@ function renderItemAnalysis(){
     '</div>'+
     '<div class="box"><h4>📊 Summary</h4><div id="ia-kpi">'+loadingBox()+'</div>'+
       '<p class="desc" style="margin-top:10px">No item selected = all items combined. Select one or many to compare.</p></div></div>'+
-    '<div class="chartbox"><h4>🧊 Date-wise sales (3D)</h4><div id="ia-chart">'+loadingBox()+'</div></div>');
-  loadIA();
+    '<div class="chartbox"><h4>🧊 Date-wise sales (3D)</h4><div id="ia-chart">'+loadingBox()+'</div></div>'+
+    '<div class="box" style="border-color:rgba(124,92,255,.35)"><h4>📦 IMS — Stock health &amp; 80/20</h4>'+
+      '<p class="desc" style="margin-bottom:10px">Stock = Purchase − Sales. Max level = consumption/day × lead time × safety factor.</p>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'+
+        '<div class="field" style="margin:0"><label>Consumption window</label><select id="ims-win" onchange="loadIMS()"><option value="90">90 days</option><option value="180">180 days</option></select></div>'+
+        '<div class="field" style="margin:0"><label>Lead time (days)</label><input id="ims-lead" type="number" min="1" value="12" onchange="loadIMS()" style="width:110px"></div>'+
+        '<div class="field" style="margin:0"><label>Safety factor</label><input id="ims-sf" type="number" min="1" step="0.1" value="1.2" onchange="loadIMS()" style="width:110px"></div>'+
+        '<button class="btn ghost sm" onclick="loadIMS()">↻ Recalculate</button>'+
+      '</div>'+
+      '<div id="ims-note" class="desc" style="margin-top:8px"></div>'+
+    '</div>'+
+    '<div id="ims-kpi">'+loadingBox()+'</div>'+
+    '<div id="ims-bands"></div>'+
+    '<div class="chartbox"><h4>📈 Pareto 80/20 — GP contribution</h4><div id="ims-pareto">'+loadingBox()+'</div></div>'+
+    '<div class="box"><h4>🎯 Action list</h4>'+
+      '<div id="ims-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>'+
+      '<input id="ims-search" placeholder="search item…" oninput="imsRender()" style="margin-bottom:10px">'+
+      '<div id="ims-table">'+loadingBox()+'</div></div>');
+  loadIA(); loadIMS();
 }
 function iaQuick(r){
   const t=new Date();
@@ -1663,6 +1680,101 @@ function loadIA(){
       statCard('Orders',Number(t.orders).toLocaleString('en-IN'))+statCard('Avg / Day',inrS(t.avgDaily))+'</div>';
     drawIA3D(d.dates,d.series);
   }).catch(e=>{$('ia-kpi').innerHTML=connBox(e);});
+}
+/* ---------- IMS (stock health + 80/20) ---------- */
+var IMS_DATA=null, IMS_FILTER='all';
+var IMS_COL={ purple:{c:'#b388ff',n:'Purple',t:'Overstock — buying kam karo'},
+              green :{c:'#37d399',n:'Green', t:'Healthy'},
+              yellow:{c:'#ffb347',n:'Yellow',t:'Girr raha — reorder plan'},
+              red   :{c:'#ff5d6c',n:'Red',   t:'Demand high — client kho rahe, 15-din review'},
+              black :{c:'#8a8f9e',n:'Black', t:'Stock out — emergency'} };
+function loadIMS(){
+  if(!$('ims-kpi'))return;
+  var win=val('ims-win')||'90', lead=val('ims-lead')||'12', sf=val('ims-sf')||'1.2';
+  apiS({action:'getIMS',token:tGet(),window:win,lead:lead,sf:sf}).then(function(d){
+    if(!$('ims-kpi'))return;
+    if(!d||!d.ok){ $('ims-kpi').innerHTML=errBox(d); return; }
+    IMS_DATA=d;
+    var c=d.config, k=d.kpis;
+    if($('ims-note')) $('ims-note').innerHTML=
+      'Stock = purchased − sold + returned. Max level = consumption/day × lead '+c.lead+'d × safety '+c.sf+'. '+
+      'Window '+c.window+'d, consumption divided by <b>'+c.effDays+' days</b> (full data span '+c.spanDays+'d)'+
+      (k.returnRows?' · '+k.returnRows+' return rows added back':'')+
+      (k.negativeItems?' · ⚠️ '+k.negativeItems+' items negative stock (opening stock missing)':'');
+    $('ims-kpi').innerHTML='<div class="cards">'+
+      statCard('Purchased qty',Number(Math.round(k.purchasedQty||0)).toLocaleString('en-IN'),'total in')+
+      statCard('Sold qty',Number(Math.round(k.soldQty||0)).toLocaleString('en-IN'),'total out')+
+      statCard('Returned qty',Number(Math.round(k.returnedQty||0)).toLocaleString('en-IN'),'back into stock')+
+      statCard('Stock left',Number(Math.round(k.totalStock)).toLocaleString('en-IN'),'purchased − sold + returned')+
+      statCard('Sell-through',(k.sellThru||0).toFixed(1)+'%','of purchased qty sold')+
+      statCard('Items tracked',Number(k.items).toLocaleString('en-IN'))+
+      statCard('Stock value',inrS(k.stockValue))+
+      statCard('🚨 Urgent (Red+Black)',Number(k.urgent).toLocaleString('en-IN'),'lost-sale risk')+
+      statCard('🟣 Overstock',Number(k.overstock).toLocaleString('en-IN'),'buying kam karo')+
+      statCard('A-class items',Number(k.aItems).toLocaleString('en-IN'),Math.round(k.aGpShare)+'% of GP')+'</div>';
+    imsBands(); imsPareto(); imsPills(); imsRender();
+  }).catch(function(e){ if($('ims-kpi'))$('ims-kpi').innerHTML=connBox(e); });
+}
+function imsBands(){
+  if(!$('ims-bands')||!IMS_DATA)return;
+  var b=IMS_DATA.bands, tot=Math.max(1,IMS_DATA.kpis.items);
+  $('ims-bands').innerHTML='<div class="box"><h4>🎨 Stock colour bands</h4><div class="cards">'+
+    ['purple','green','yellow','red','black'].map(function(k){ var m=IMS_COL[k], v=b[k]||0;
+      return '<div class="stat" style="border-color:'+m.c+'55"><div class="n" style="color:'+m.c+'">'+v+'</div>'+
+        '<div class="l">'+m.n+' · '+Math.round(v/tot*100)+'%</div>'+
+        '<div class="desc" style="font-size:11.5px;margin-top:4px">'+m.t+'</div>'+
+        '<div class="bar" style="background:'+m.c+'"></div></div>'; }).join('')+'</div></div>';
+}
+function imsPareto(){
+  if(!$('ims-pareto')||!IMS_DATA)return;
+  var top=IMS_DATA.items.filter(function(x){return x.gp>0;}).slice(0,20);
+  if(!top.length){ $('ims-pareto').innerHTML=noData('No gross-profit data yet.'); return; }
+  var el=echInit('ims-pareto',Math.max(320,top.length*26+90)); if(!el)return;
+  el.setOption({ backgroundColor:'transparent', grid:{left:8,right:52,top:24,bottom:8,containLabel:true},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'rgba(20,20,32,.95)',borderColor:'rgba(255,255,255,.12)',textStyle:{color:'#eef0f7'},
+      formatter:function(p){ var i=p[0].dataIndex,x=top[i]; return '<b>'+x.item+'</b><br>GP: '+inr(x.gp)+'<br>Cumulative: '+x.cumPct.toFixed(1)+'%<br>Class: '+x.abc; }},
+    xAxis:[{type:'value',axisLabel:{color:'#9aa0b4',formatter:function(v){return inrShort(v);}},splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
+           {type:'value',max:100,position:'top',axisLabel:{color:'#9aa0b4',formatter:'{value}%'},splitLine:{show:false}}],
+    yAxis:{type:'category',inverse:true,data:top.map(function(x){return x.item.length>26?x.item.slice(0,26)+'…':x.item;}),axisLabel:{color:'#c2c7d6',fontSize:11.5}},
+    series:[{type:'bar',data:top.map(function(x){return {value:Math.round(x.gp),itemStyle:{color:x.abc==='A'?'#7c5cff':(x.abc==='B'?'#46b5ff':'#5a6072'),borderRadius:[0,6,6,0]}};}),barWidth:'62%',
+      label:{show:true,position:'right',color:'#9aa0b4',fontSize:10.5,formatter:function(p){return top[p.dataIndex].abc;}}},
+     {type:'line',xAxisIndex:1,data:top.map(function(x){return +x.cumPct.toFixed(1);}),smooth:true,symbol:'circle',symbolSize:5,lineStyle:{color:'#ffb347',width:2},itemStyle:{color:'#ffb347'}}]
+  });
+}
+function imsPills(){
+  if(!$('ims-pills'))return;
+  var b=IMS_DATA?IMS_DATA.bands:{};
+  var defs=[['all','All'],['A','⭐ A-class (80%)'],['red','🔴 Red '+(b.red||0)],['black','⚫ Stock out '+(b.black||0)],['yellow','🟡 Yellow '+(b.yellow||0)],['purple','🟣 Overstock '+(b.purple||0)],['green','🟢 Green '+(b.green||0)]];
+  $('ims-pills').innerHTML=defs.map(function(d){ return '<button class="pill'+(IMS_FILTER===d[0]?' on':'')+'" onclick="imsFilter(\''+d[0]+'\')">'+d[1]+'</button>'; }).join('');
+}
+function imsFilter(f){ IMS_FILTER=f; imsPills(); imsRender(); }
+function imsRender(){
+  if(!$('ims-table')||!IMS_DATA)return;
+  var q=(val('ims-search')||'').toLowerCase();
+  var list=IMS_DATA.items.filter(function(x){
+    if(IMS_FILTER==='A' && x.abc!=='A')return false;
+    if(IMS_FILTER!=='all' && IMS_FILTER!=='A' && x.color!==IMS_FILTER)return false;
+    return !q || x.item.toLowerCase().indexOf(q)>=0;
+  });
+  if(!list.length){ $('ims-table').innerHTML=noData('Is filter me koi item nahi.'); return; }
+  $('ims-table').innerHTML='<p class="desc" style="margin-bottom:6px">'+list.length+' items</p>'+
+    tbl(['Item','Class','Purchased','Sold','Returned','Left','Cons/day','Max level','% of max','Status','Action'],
+      list.slice(0,150).map(function(x){ var m=IMS_COL[x.color];
+        var act = x.color==='black' ? 'Urgent buy '+x.reorderQty
+                : x.color==='red'   ? 'Buy now '+x.reorderQty
+                : x.color==='yellow'? 'Reorder '+x.reorderQty
+                : x.color==='purple'? 'Buying kam karo'
+                : 'OK';
+        return ['<b>'+esc(x.item)+'</b>',
+          '<span class="role-pill">'+x.abc+'</span>',
+          Math.round(x.bought),Math.round(x.sold),Math.round(x.returned||0),
+          (x.stock<0?'<span style="color:#ff97a2">'+Math.round(x.stock)+'</span>':'<b>'+Math.round(x.stock)+'</b>'),
+          x.cpd.toFixed(2),
+          Math.round(x.max),
+          Math.round(x.pct>999?999:x.pct)+'%',
+          '<span class="badge" style="background:'+m.c+'22;color:'+m.c+';border:1px solid '+m.c+'55">'+m.n+'</span>',
+          '<span style="color:'+(x.color==='red'||x.color==='black'?'#ff97a2':(x.color==='purple'?'#c9bdff':'var(--muted)'))+'">'+act+'</span>'];
+      }));
 }
 function drawIA3D(dates,series){
   if(!$('ia-chart'))return;
