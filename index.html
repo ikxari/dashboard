@@ -447,7 +447,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbzoCfkuUGOpQyGupo_s27i7OGrsQwiIdPMQ1IQNJRILjE0PC6sKU-GHh3mteSag38CR/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbyArmfK9ysNKDxoaxb5_WSAdFt7-kMM3vzlRcOxvQtlgfSauzkY9KjnDhr1356WdXhq/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -576,7 +576,7 @@ function canSee(id){
 }
 
 let CONFIG={maintenance:{},notice:{on:false}};
-var UI_BUILD='F3-en+pdf';
+var UI_BUILD='F4-selftest';
 function enterApp(user){
   ME=user;
   var bt=$('buildTag'); if(bt) bt.textContent=UI_BUILD;
@@ -2124,6 +2124,10 @@ function renderSettings(){
       '<div class="field"><label>Confirm</label><div class="pwrap"><input id="cp-new2" type="password" placeholder="repeat"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div></div>'+
       '<button class="btn" id="cp-btn" onclick="doChangePw()" style="width:auto;padding:11px 22px">Update password</button>'+
     '</div>'+
+    (ME.rank>=4?('<div class="box"><h4>🩺 System self-test</h4>'+
+      '<p class="desc" style="margin-bottom:10px">Runs every report endpoint against the live sheets and reports exactly what fails and where.</p>'+
+      '<button class="btn ghost" onclick="runSelfTest()">Run self-test</button>'+
+      '<div id="st-out" style="margin-top:12px"></div></div>'):'')+
     (ME.role==='Super Admin'?(
     '<div class="box"><h4>🧠 Teach Parekh (AI Assistant)</h4>'+
       '<p class="desc" style="margin-bottom:10px">Teach Parekh a custom answer. When these keywords appear, it replies with your answer. Stored permanently in the sheet.</p>'+
@@ -2139,6 +2143,22 @@ function brainList(){ if(!$('br-list'))return; apiS({action:'brainGet',token:tGe
   $('br-list').innerHTML='<p class="desc" style="margin-bottom:6px">Trained answers ('+b.length+')</p>'+(b.length?tbl(['Keywords','Answer',''],b.map(function(x){return [esc(x.keywords),'<span style="color:var(--muted)">'+esc((x.answer||'').slice(0,80))+((x.answer||'').length>80?'…':'')+'</span>','<button class="icbtn dng" onclick="brainDel('+x.row+')">Delete</button>'];})):'<p class="desc">Nothing has been taught yet.</p>'); }).catch(function(e){ if($('br-list'))$('br-list').innerHTML=connBox(e); }); }
 function brainSave(){ var kw=val('br-kw'), ans=val('br-ans'); if(!kw||!ans)return toast('Enter both the keywords and the answer','err'); apiS({action:'brainAdd',token:tGet(),keywords:kw,answer:ans}).then(function(d){ if(d&&d.ok){ toast('Parekh has learned it 🧠','ok'); if($('br-kw'))$('br-kw').value=''; if($('br-ans'))$('br-ans').value=''; brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }
 function brainDel(r){ modalConfirm({title:'Delete',message:'Delete this trained answer?',icon:'🗑️',confirmText:'Delete',danger:true,onConfirm:function(){ apiS({action:'brainDelete',token:tGet(),row:r}).then(function(d){ if(d&&d.ok){ toast('Deleted','ok'); brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }}); }
+function runSelfTest(){
+  var box=$('st-out'); if(box)box.innerHTML=loadingBox();
+  api({action:'selfTest',token:tGet()}).then(function(d){
+    if(!box)return;
+    if(!d.ok)return (box.innerHTML=errBox(d));
+    function rows(arr){ return arr.map(function(l){
+      var bad=/MISSING|THREW|FAIL|ERROR/.test(l);
+      return '<div style="padding:5px 9px;border-bottom:1px solid var(--brd);font-size:12.5px;color:'+
+        (bad?'#ff97a2':'var(--muted)')+'">'+(bad?'✗ ':'✓ ')+esc(l)+'</div>'; }).join(''); }
+    var sheets=Object.keys(d.sheets).map(function(k){ return k+': '+d.sheets[k]; });
+    box.innerHTML='<p class="desc">Backend version <b>'+esc(d.version)+'</b></p>'+
+      '<p class="desc" style="margin-top:10px"><b>Sheets</b></p>'+rows(sheets)+
+      '<p class="desc" style="margin-top:10px"><b>Core functions</b></p>'+rows(d.checks)+
+      '<p class="desc" style="margin-top:10px"><b>Endpoints</b></p>'+rows(d.endpoints);
+  }).catch(function(e){ if(box)box.innerHTML=connBox(e); });
+}
 function doChangePw(){
   const o=val('cp-old'),n=val('cp-new'),n2=val('cp-new2');
   if(!o||!n)return toast('Fill all fields','err');
