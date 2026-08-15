@@ -338,7 +338,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="lead">Sign in to your Ikxari account.</div>
         <div class="field"><label>Email</label><input id="li-email" type="email" placeholder="you@company.com" autocomplete="username"></div>
         <div class="field"><label>Password</label><div class="pwrap"><input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div>
-        <div class="linkrow"><span></span><a onclick="show('forgot')">Forgot password?</a></div>
+        <div class="linkrow"><a onclick="urlPrompt()" title="Change the Apps Script backend URL">Backend URL</a><a onclick="show('forgot')">Forgot password?</a></div>
         <button class="btn" id="li-btn" onclick="doLogin()">Sign In</button>
         <div class="alt">No account? <a onclick="show('signup')">Create one</a></div>
       </div>
@@ -447,18 +447,40 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbyArmfK9ysNKDxoaxb5_WSAdFt7-kMM3vzlRcOxvQtlgfSauzkY9KjnDhr1356WdXhq/exec";   // GAS /exec URL
+/* Default backend URL. A Super Admin can override it in Settings without editing this file;
+   the override is stored in the browser and always wins. */
+const API_DEFAULT = "https://script.google.com/macros/s/AKfycbwwYlAtSG9DfBDxanyv5NU76gTWRnGh9V4dM1T5pcivWhHtB7uSATE6mislPQJEZA/exec";
+function apiUrl(){
+  try{ var u=localStorage.getItem('ikxari_api'); if(u && /^https:\/\/script\.google\.com\//.test(u)) return u; }catch(e){}
+  return API_DEFAULT;
+}
+function apiUrlSet(u){ try{ localStorage.setItem('ikxari_api', u); }catch(e){} }
+function apiUrlClear(){ try{ localStorage.removeItem('ikxari_api'); }catch(e){} }
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
-let _busy=0;
-function showLoader(){_busy++;const l=document.getElementById('faceLoader');if(l)l.classList.add('show');}
-function hideLoader(){_busy=Math.max(0,_busy-1);if(_busy===0){const l=document.getElementById('faceLoader');if(l)l.classList.remove('show');}}
+let _busy=0, _busyGuard=null;
+function _loaderEl(){ return document.getElementById('faceLoader'); }
+function forceHideLoader(){ _busy=0; var l=_loaderEl(); if(l)l.classList.remove('show');
+  if(_busyGuard){ clearTimeout(_busyGuard); _busyGuard=null; } }
+function showLoader(){
+  _busy++; var l=_loaderEl(); if(l)l.classList.add('show');
+  if(_busyGuard) clearTimeout(_busyGuard);
+  // never let the overlay trap the app if a request stalls
+  _busyGuard=setTimeout(function(){ forceHideLoader(); toast('The server took too long to respond. Try Refresh.','err'); }, 25000);
+}
+function hideLoader(){ _busy=Math.max(0,_busy-1);
+  if(_busy===0){ var l=_loaderEl(); if(l)l.classList.remove('show');
+    if(_busyGuard){ clearTimeout(_busyGuard); _busyGuard=null; } } }
 function api(p){
-  if(API.indexOf('PASTE_')===0){return Promise.reject(new Error('Backend URL not set. Paste your GAS /exec URL into API.'));}
+  var url=apiUrl();
+  if(!url || url.indexOf('PASTE_')===0){ return Promise.reject(new Error('Backend URL is not set. Open Settings and paste your Apps Script /exec URL.')); }
   showLoader();
-  return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)})
-    .then(r=>r.json()).then(d=>{hideLoader();return d;}).catch(e=>{hideLoader();throw e;});
+  var timer, timed=new Promise(function(_,rej){ timer=setTimeout(function(){ rej(new Error('The server did not respond in 30 seconds.')); },30000); });
+  var call=fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(function(r){return r.json();});
+  return Promise.race([call,timed])
+    .then(function(d){ clearTimeout(timer); hideLoader(); return d; })
+    .catch(function(e){ clearTimeout(timer); hideLoader(); throw e; });
 }
 function tGet(){try{return localStorage.getItem('ikxari_token')||''}catch(e){return ''}}
 function tSet(t){try{localStorage.setItem('ikxari_token',t)}catch(e){}}
@@ -489,6 +511,14 @@ function show(v){VIEWS.forEach(x=>{$('v-'+x).style.display=(x===v)?'block':'none
 
 function btnBusy(id,on,label){const b=$(id);if(on){b.dataset.t=b.innerHTML;b.disabled=true;b.innerHTML='<span class="spin"></span>'+(label||'Please wait');}else{b.disabled=false;b.innerHTML=b.dataset.t||label;}}
 
+function urlPrompt(){
+  var cur=apiUrl();
+  var u=prompt('Apps Script /exec URL for this dashboard:', cur);
+  if(u===null) return;
+  u=(u||'').trim();
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(u)) return toast('That is not a valid /exec URL','err');
+  apiUrlSet(u); toast('Saved. Reloading…','ok'); setTimeout(function(){ location.reload(); },800);
+}
 function doLogin(){
   const email=val('li-email'),pass=val('li-pass');
   if(!email||!pass)return toast('Enter email and password','err');
@@ -576,7 +606,7 @@ function canSee(id){
 }
 
 let CONFIG={maintenance:{},notice:{on:false}};
-var UI_BUILD='F5-safe';
+var UI_BUILD='F6-url';
 function enterApp(user){
   ME=user;
   var bt=$('buildTag'); if(bt) bt.textContent=UI_BUILD;
@@ -1102,8 +1132,9 @@ function renderSoon(label){
 
 /* ---------- silent fetch (for 60s auto-refresh, no loader flash) ---------- */
 function apiS(p){
-  if(API.indexOf('PASTE_')===0)return Promise.reject(new Error('Backend URL not set.'));
-  return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(r=>r.json());
+  var url=apiUrl();
+  if(!url || url.indexOf('PASTE_')===0) return Promise.reject(new Error('Backend URL is not set.'));
+  return fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(function(r){return r.json();});
 }
 
 /* ---------- Purchase Entry (Accountant / Admin / Super Admin) ---------- */
@@ -2126,6 +2157,17 @@ function renderSettings(){
       '<div class="field"><label>Confirm</label><div class="pwrap"><input id="cp-new2" type="password" placeholder="repeat"><button class="eye" type="button" onclick="tpw(this)">👁</button></div></div></div>'+
       '<button class="btn" id="cp-btn" onclick="doChangePw()" style="width:auto;padding:11px 22px">Update password</button>'+
     '</div>'+
+    (ME.role==='Super Admin'?('<div class="box" style="border-color:rgba(124,92,255,.35)"><h4>🔗 Backend URL</h4>'+
+      '<p class="desc" style="margin-bottom:10px">Paste a new Apps Script <b>/exec</b> URL after a deployment. It is saved in this browser and takes effect immediately — no need to edit the HTML file.</p>'+
+      '<div class="field"><label>Current URL</label><input id="api-url" value="'+esc(apiUrl())+'" placeholder="https://script.google.com/macros/s/…/exec"></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="btn" onclick="apiTest()">🔌 Test connection</button>'+
+        '<button class="btn ghost" onclick="apiSave()">💾 Save URL</button>'+
+        '<button class="btn ghost" onclick="apiReset()">↩︎ Reset to built-in</button>'+
+      '</div>'+
+      '<div id="api-out" style="margin-top:11px"></div>'+
+      '<p class="desc" style="margin-top:10px">Saved on this device only. Each person who needs the new URL should paste it once, or you can publish it in the HTML file as usual.</p>'+
+    '</div>'):'')+
     (ME.rank>=4?('<div class="box"><h4>🩺 System self-test</h4>'+
       '<p class="desc" style="margin-bottom:10px">Runs every report endpoint against the live sheets and reports exactly what fails and where.</p>'+
       '<button class="btn ghost" onclick="runSelfTest()">Run self-test</button>'+
@@ -2145,6 +2187,33 @@ function brainList(){ if(!$('br-list'))return; apiS({action:'brainGet',token:tGe
   $('br-list').innerHTML='<p class="desc" style="margin-bottom:6px">Trained answers ('+b.length+')</p>'+(b.length?tbl(['Keywords','Answer',''],b.map(function(x){return [esc(x.keywords),'<span style="color:var(--muted)">'+esc((x.answer||'').slice(0,80))+((x.answer||'').length>80?'…':'')+'</span>','<button class="icbtn dng" onclick="brainDel('+x.row+')">Delete</button>'];})):'<p class="desc">Nothing has been taught yet.</p>'); }).catch(function(e){ if($('br-list'))$('br-list').innerHTML=connBox(e); }); }
 function brainSave(){ var kw=val('br-kw'), ans=val('br-ans'); if(!kw||!ans)return toast('Enter both the keywords and the answer','err'); apiS({action:'brainAdd',token:tGet(),keywords:kw,answer:ans}).then(function(d){ if(d&&d.ok){ toast('Parekh has learned it 🧠','ok'); if($('br-kw'))$('br-kw').value=''; if($('br-ans'))$('br-ans').value=''; brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }
 function brainDel(r){ modalConfirm({title:'Delete',message:'Delete this trained answer?',icon:'🗑️',confirmText:'Delete',danger:true,onConfirm:function(){ apiS({action:'brainDelete',token:tGet(),row:r}).then(function(d){ if(d&&d.ok){ toast('Deleted','ok'); brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }}); }
+function apiOut(html){ var b=$('api-out'); if(b)b.innerHTML=html; }
+function apiTest(){
+  var u=val('api-url');
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(u))
+    return apiOut('<p class="desc" style="color:#ff97a2">That does not look like an Apps Script /exec URL.</p>');
+  apiOut(loadingBox());
+  fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+           body:JSON.stringify({action:'getConfig',token:tGet()})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d && d.ok) apiOut('<p class="desc" style="color:#7fe9c0">✓ Connected. Backend version <b>'+esc(d.version||'unknown')+'</b>. Click Save URL to keep it.</p>');
+      else apiOut('<p class="desc" style="color:#ffce85">Reached the server but it replied: '+esc((d&&(d.error||d.msg))||'unknown')+'</p>');
+    })
+    .catch(function(e){ apiOut('<p class="desc" style="color:#ff97a2">Could not reach that URL. '+esc(e.message)+'</p>'); });
+}
+function apiSave(){
+  var u=val('api-url');
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(u))
+    return toast('Enter a valid Apps Script /exec URL','err');
+  apiUrlSet(u); toast('Backend URL saved','ok');
+  apiOut('<p class="desc" style="color:#7fe9c0">Saved. Reloading…</p>');
+  setTimeout(function(){ location.reload(); },900);
+}
+function apiReset(){
+  modalConfirm({icon:'↩︎',title:'Reset backend URL',message:'Go back to the URL built into this file?',
+    confirmText:'Reset',onConfirm:function(){ apiUrlClear(); toast('Reset to built-in URL','ok'); setTimeout(function(){ location.reload(); },700); }});
+}
 function runSelfTest(){
   var box=$('st-out'); if(box)box.innerHTML=loadingBox();
   api({action:'selfTest',token:tGet()}).then(function(d){
@@ -2181,11 +2250,11 @@ function doLogout(){
   const t=tGet();tClr();ME=null;
   $('appView').style.display='none';$('authView').style.display='flex';show('login');
   $('li-pass').value='';
-  if(t&&API.indexOf('PASTE_')!==0){api({action:'logout',token:t}).catch(()=>{});}
+  if(t&&apiUrl()&&apiUrl().indexOf('PASTE_')!==0){api({action:'logout',token:t}).catch(()=>{});}
 }
 function boot(){
   const t=tGet();
-  if(!t||API.indexOf('PASTE_')===0){show('login');return;}
+  if(!t||!apiUrl()||apiUrl().indexOf('PASTE_')===0){show('login');return;}
   api({action:'session',token:t}).then(d=>{ if(d.ok)enterApp(d.user); else {tClr();show('login');} }).catch(()=>show('login'));
 }
 boot();
