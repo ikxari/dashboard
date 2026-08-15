@@ -576,7 +576,7 @@ function canSee(id){
 }
 
 let CONFIG={maintenance:{},notice:{on:false}};
-var UI_BUILD='F4-selftest';
+var UI_BUILD='F5-safe';
 function enterApp(user){
   ME=user;
   var bt=$('buildTag'); if(bt) bt.textContent=UI_BUILD;
@@ -753,6 +753,8 @@ function quickRange(r){
   openTab(CUR);
 }
 function inr(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function nf(v,dp){ var x=Number(v); if(!isFinite(x))x=0; return x.toFixed(dp==null?1:dp); }
+function nnum(v){ var x=Number(v); if(!isFinite(x))x=0; return Math.round(x).toLocaleString('en-IN'); }
 function inrS(n){ n=n||0; var a=Math.abs(n);
   if(a>=1e7) return '₹'+(n/1e7).toFixed(2)+' Cr';
   if(a>=1e5) return '₹'+(n/1e5).toFixed(2)+' L';
@@ -765,7 +767,7 @@ function echEl(id,h){ var el=$(id); if(el) el.style.height=(h||320)+'px'; return
 function echInit(id,h){ var el=echEl(id,h); if(!el||typeof echarts==='undefined')return null; if(_ECH[id]){try{_ECH[id].dispose();}catch(e){}} var c=echarts.init(el,null,{renderer:'canvas'}); _ECH[id]=c; return c; }
 window.addEventListener('resize',function(){ for(var k in _ECH){ try{_ECH[k].resize();}catch(e){} } });
 var TT={backgroundColor:'rgba(20,20,32,.96)',borderColor:'rgba(124,92,255,.4)',textStyle:{color:'#eef0f7',fontFamily:'Jost'}};
-function axL(money){ return {color:'#7e8497',fontFamily:'Jost',formatter:function(v){return money?inrShort(v):Number(v).toLocaleString('en-IN');}}; }
+function axL(money){ return {color:'#7e8497',fontFamily:'Jost',formatter:function(v){return money?inrShort(v):nnum(v);}}; }
 /* line / area trend (multi-series) */
 function hcArea(id,cats,series){
   var c=echInit(id,300); if(!c)return;
@@ -781,12 +783,12 @@ function hbar(id,cats,data,color,money){
   var n=cats.length||1; var c=echInit(id,Math.max(200,n*30+44)); if(!c)return;
   var cc=cats.slice().reverse(), dd=data.slice().reverse().map(function(x){return Math.round(x);});
   c.setOption({ grid:{left:8,right:70,top:6,bottom:6,containLabel:true},
-    tooltip:Object.assign({trigger:'item',formatter:function(p){return p.name+'<br/><b>'+(money?inr(p.value):Number(p.value).toLocaleString('en-IN'))+'</b>';}},TT),
+    tooltip:Object.assign({trigger:'item',formatter:function(p){return p.name+'<br/><b>'+(money?inr(p.value):nnum(p.value))+'</b>';}},TT),
     xAxis:{type:'value',axisLabel:axL(money),splitLine:{lineStyle:{color:'rgba(255,255,255,.05)'}}},
     yAxis:{type:'category',data:cc,axisLabel:{color:'#cfd3e2',fontFamily:'Jost',fontSize:11,width:150,overflow:'truncate'},axisLine:{lineStyle:{color:'rgba(255,255,255,.08)'}},axisTick:{show:false}},
     series:[{type:'bar',data:dd,barMaxWidth:22,
       itemStyle:{borderRadius:[0,7,7,0],shadowBlur:10,shadowColor:'rgba(124,92,255,.25)',shadowOffsetX:2,color:color||new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#9a7cff'},{offset:1,color:'#46b5ff'}])},
-      label:{show:true,position:'right',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrShort(p.value):Number(p.value).toLocaleString('en-IN');}}}],
+      label:{show:true,position:'right',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrShort(p.value):nnum(p.value);}}}],
     animationDuration:900,animationEasing:'cubicOut',animationDelay:function(i){return i*40;} });
 }
 /* ranked horizontal bar (#1, #2 …) */
@@ -796,11 +798,11 @@ function hcCylinder(id,names,values,money){ hbar(id,names,values,null,money); }
 function hcColumn(id,cats,data,color,money){
   var c=echInit(id,320); if(!c)return;
   c.setOption({ grid:{left:8,right:14,top:16,bottom:24,containLabel:true},
-    tooltip:Object.assign({trigger:'axis',valueFormatter:function(v){return money?inr(v):Number(v).toLocaleString('en-IN');}},TT),
+    tooltip:Object.assign({trigger:'axis',valueFormatter:function(v){return money?inr(v):nnum(v);}},TT),
     xAxis:{type:'category',data:cats,axisLabel:{color:'#9aa0b4',fontFamily:'Jost',rotate:(cats.length||0)>8?38:0,hideOverlap:true},axisLine:{lineStyle:{color:'rgba(255,255,255,.12)'}}},
     yAxis:{type:'value',axisLabel:axL(money),splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
     series:[{type:'bar',data:data.map(function(x){return Math.round(x);}),barMaxWidth:42,itemStyle:{borderRadius:[7,7,0,0],shadowBlur:10,shadowColor:'rgba(124,92,255,.28)',shadowOffsetY:-2,color:color||new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#b39bff'},{offset:1,color:'#5b3fd6'}])},
-      label:{show:true,position:'top',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrShort(p.value):Number(p.value).toLocaleString('en-IN');}}}],
+      label:{show:true,position:'top',color:'#cfd3e2',fontFamily:'Jost',fontSize:11,formatter:function(p){return money?inrShort(p.value):nnum(p.value);}}}],
     animationDuration:900,animationEasing:'elasticOut',animationDelay:function(i){return i*50;} });
 }
 /* flat pie/donut — only for <=5 categories (GST rates) */
@@ -884,10 +886,10 @@ function renderSales(){
         statCard('Total Revenue',inrS(k.revenue),'In. GST')+
         statCard('Gross Sale',inrS(k.grossSale),'Ex. GST')+
         statCard('Gross Profit',inrS(k.grossProfit))+
-        statCard('Margin',k.margin.toFixed(1)+'%')+
-        statCard('Qty Sold',Number(k.qty).toLocaleString('en-IN'),'fabric meter=1')+
-        statCard('Total Bills',Number(k.orders).toLocaleString('en-IN'))+
-        statCard('Total Customers',Number(k.customers).toLocaleString('en-IN'))+
+        statCard('Margin',nf(k.margin,1)+'%')+
+        statCard('Qty Sold',nnum(k.qty),'fabric meter=1')+
+        statCard('Total Bills',nnum(k.orders))+
+        statCard('Total Customers',nnum(k.customers))+
         statCard('GST Collected',inrS(k.gst))+
       '</div>'+
       '<div class="grid2">'+
@@ -922,9 +924,9 @@ function renderReturns(){
   dapi('getReturns').then(d=>{
     if(!d.ok)return($('rt').innerHTML=errBox(d)); const k=d.kpis;
     $('rt').innerHTML='<div class="cards">'+
-      statCard('Return Qty',Number(k.returnQty).toLocaleString('en-IN'))+
-      statCard('Return Lines',Number(k.returnLines).toLocaleString('en-IN'))+
-      statCard('Customers',Number(k.returnCustomers).toLocaleString('en-IN'))+
+      statCard('Return Qty',nnum(k.returnQty))+
+      statCard('Return Lines',nnum(k.returnLines))+
+      statCard('Customers',nnum(k.returnCustomers))+
     '</div>'+
     '<div class="box"><p class="desc">⚠️ '+esc(d.note||'')+'</p></div>'+
     '<div class="chartbox"><h4>📉 Return qty trend</h4><div id="rtTrend"></div></div>'+
@@ -942,11 +944,11 @@ function renderPurchase(){
     $('pu').innerHTML='<div class="cards">'+
       statCard('Purchase Value',inrS(k.purchaseValue),'incl. tax')+
       statCard('Value (ex-tax)',inrS(k.purchaseValueWOT))+
-      statCard('Qty',Number(k.qty).toLocaleString('en-IN'))+
+      statCard('Qty',nnum(k.qty))+
       statCard('GST Paid',inrS(k.gst))+
-      statCard('Invoices',Number(k.invoices||0).toLocaleString('en-IN'))+
-      statCard('Lines',Number(k.lines).toLocaleString('en-IN'))+
-      statCard('Return Qty',Number(k.returnQty).toLocaleString('en-IN'))+
+      statCard('Invoices',nnum(k.invoices||0))+
+      statCard('Lines',nnum(k.lines))+
+      statCard('Return Qty',nnum(k.returnQty))+
     '</div>'+
     '<div class="chartbox"><h4>📈 Purchase trend (incl. tax)</h4><div id="puTrend"></div></div>'+
     '<div class="grid2">'+
@@ -968,9 +970,9 @@ function renderCRM(){
     const totalCust=d.kpis.customers||0;
     const repeat=cf.filter(x=>x.bucket.charAt(0)!=='1').reduce((a,b)=>a+b.count,0);
     $('cr').innerHTML='<div class="cards">'+
-      statCard('Total Customers',Number(totalCust).toLocaleString('en-IN'))+
-      statCard('Repeat Customers',Number(repeat).toLocaleString('en-IN'))+
-      statCard('Repeat Rate',(totalCust>0?(repeat/totalCust*100):0).toFixed(1)+'%')+
+      statCard('Total Customers',nnum(totalCust))+
+      statCard('Repeat Customers',nnum(repeat))+
+      statCard('Repeat Rate',nf(totalCust>0?(repeat/totalCust*100):0,1)+'%')+
       statCard('Top Spender',tc.length?esc(tc[0].name.slice(0,14)):'—',tc.length?inrS(tc[0].value):'')+
     '</div>'+
     '<div class="grid2">'+
@@ -978,7 +980,7 @@ function renderCRM(){
       '<div class="chartbox"><h4>🔁 Customer purchase frequency</h4><div id="crFreq"></div></div>'+
     '</div>'+
     '<div class="box"><h4>🧾 Customer revenue leaderboard</h4>'+tbl(['#','Customer','Revenue','Qty purchased'],
-      tc.map((c,i)=>[(i+1),esc(c.name),inr(c.value),Number(c.qty).toLocaleString('en-IN')]))+'</div>';
+      tc.map((c,i)=>[(i+1),esc(c.name),inr(c.value),nnum(c.qty)]))+'</div>';
     hbar('crTop',tc.map(x=>x.name),tc.map(x=>x.value),null,true);
     hcColumn('crFreq',cf.map(x=>x.bucket),cf.map(x=>x.count),'#7c5cff',false);
   }).catch(e=>$('cr').innerHTML=connBox(e));
@@ -991,12 +993,12 @@ function renderVendor(){
     if(!d.ok)return($('vn').innerHTML=errBox(d)); const k=d.kpis;
     const sheetUrl=d.sheetId?('https://docs.google.com/spreadsheets/d/'+d.sheetId+'/edit'):'';
     $('vn').innerHTML='<div class="cards">'+
-      statCard('Vendors',Number(k.vendors).toLocaleString('en-IN'))+
+      statCard('Vendors',nnum(k.vendors))+
       statCard('Sale Value',inrS(k.saleValue),'goods sold')+
     '</div>'+
     '<div class="chartbox"><h4>🏆 Top vendors by sale value</h4><div id="vnChart"></div></div>'+
     '<div class="box"><h4>📋 Top 25 vendors'+(sheetUrl?'  <a href="'+sheetUrl+'" target="_blank" style="font-size:12px;color:#46b5ff;font-weight:500;margin-left:6px">Open full data in Google Sheet ↗</a>':'')+'</h4>'+
-      tbl(['#','Vendor','Qty','Sale Value'],(d.ranking||[]).map((v,i)=>[(i+1),esc(v.name),Number(v.qty).toLocaleString('en-IN'),inr(v.value)]))+'</div>';
+      tbl(['#','Vendor','Qty','Sale Value'],(d.ranking||[]).map((v,i)=>[(i+1),esc(v.name),nnum(v.qty),inr(v.value)]))+'</div>';
     var r=(d.ranking||[]).slice(0,15); hcBarV('vnChart',r.map(x=>x.name),r.map(x=>x.value),true);
   }).catch(e=>$('vn').innerHTML=connBox(e));
 }
@@ -1034,7 +1036,7 @@ function renderExpense(){
       statCard('Total Expense',inrS(k.total))+
       statCard('Recorded',inrS(k.recorded))+
       statCard('Unrecorded',inrS(k.unrecorded))+
-      statCard('Categories',Number(k.categories).toLocaleString('en-IN'))+
+      statCard('Categories',nnum(k.categories))+
     '</div>'+
     '<div class="chartbox"><h4>📉 Expense trend</h4><div id="exTrend"></div></div>'+
     '<div class="grid2">'+
@@ -1056,17 +1058,17 @@ function renderReports(){
     $('rp').innerHTML='<div class="cards">'+
       statCard('Revenue',inrS(s.revenue))+
       statCard('Net Sales',inrS(s.netSales))+
-      statCard('Gross Profit',inrS(s.grossProfit),s.margin.toFixed(1)+'%')+
+      statCard('Gross Profit',inrS(s.grossProfit),nf(s.margin,1)+'%')+
       statCard('Net Profit',inrS(s.netProfit))+
       statCard('Purchase',inrS(s.purchaseValue))+
       statCard('Expense',inrS(s.expense))+
       statCard('GST',inrS(s.gst))+
-      statCard('Orders',Number(s.orders).toLocaleString('en-IN'))+
+      statCard('Orders',nnum(s.orders))+
     '</div>'+
     '<div class="box"><h4>📤 Export</h4><p class="desc" style="margin-bottom:12px">Download the consolidated report for '+(DATE_FROM||'all time')+(DATE_TO?' → '+DATE_TO:'')+'.</p>'+
       '<button class="btn sm" onclick="exportReport()">⬇ Download CSV</button></div>'+
     '<div class="grid2">'+
-      '<div class="box"><h4>🏆 Top products</h4>'+tbl(['Product','Qty','Sales'],(d.topProducts||[]).map(p=>[esc(p.name),Number(p.qty).toLocaleString('en-IN'),inr(p.sales)]))+'</div>'+
+      '<div class="box"><h4>🏆 Top products</h4>'+tbl(['Product','Qty','Sales'],(d.topProducts||[]).map(p=>[esc(p.name),nnum(p.qty),inr(p.sales)]))+'</div>'+
       '<div class="box"><h4>👑 Top customers</h4>'+tbl(['Customer','Sales'],(d.topCustomers||[]).map(c=>[esc(c.name),inr(c.sales)]))+'</div>'+
     '</div>';
   }).catch(e=>$('rp').innerHTML=connBox(e));
@@ -1074,7 +1076,7 @@ function renderReports(){
 function exportReport(){
   if(!LAST_REPORT)return; const s=LAST_REPORT.summary; let csv='IKXARI ERP — Consolidated Report\n';
   csv+='Range,'+(DATE_FROM||'All time')+' to '+(DATE_TO||'today')+'\n\nMetric,Value\n';
-  const map={'Revenue':s.revenue,'Net Sales':s.netSales,'Gross Profit':s.grossProfit,'Margin %':s.margin.toFixed(2),
+  const map={'Revenue':s.revenue,'Net Sales':s.netSales,'Gross Profit':s.grossProfit,'Margin %':nf(s.margin,2),
     'Net Profit':s.netProfit,'Purchase Value':s.purchaseValue,'Purchase Qty':s.purchaseQty,'Expense':s.expense,
     'GST':s.gst,'Orders':s.orders,'Qty Sold':s.qtySold,'Avg Bill':Math.round(s.avgBill),'Return Qty':s.returnQty};
   Object.keys(map).forEach(k=>csv+='"'+k+'",'+map[k]+'\n');
@@ -1776,8 +1778,8 @@ function loadIA(){
     if(!IA_ALL.length || IA_ALL.length!==d.allItems.length){ IA_ALL=d.allItems; iaRenderList(); }
     const t=d.totals;
     $('ia-kpi').innerHTML='<div class="cards" style="grid-template-columns:1fr 1fr">'+
-      statCard('Total Sales',inrS(t.sales))+statCard('Qty Sold',Number(t.qty).toLocaleString('en-IN'))+
-      statCard('Orders',Number(t.orders).toLocaleString('en-IN'))+statCard('Avg / Day',inrS(t.avgDaily))+'</div>';
+      statCard('Total Sales',inrS(t.sales))+statCard('Qty Sold',nnum(t.qty))+
+      statCard('Orders',nnum(t.orders))+statCard('Avg / Day',inrS(t.avgDaily))+'</div>';
     drawIA3D(d.dates,d.series);
   }).catch(e=>{$('ia-kpi').innerHTML=connBox(e);});
 }
@@ -1823,16 +1825,16 @@ function loadIMS(){
       (k.returnRows?' · '+k.returnRows+' return rows added back':'')+
       (k.negativeItems?' · ⚠️ '+k.negativeItems+' items negative stock (opening stock missing)':'');
     $('ims-kpi').innerHTML='<div class="cards">'+
-      statCard('Purchased qty',Number(Math.round(k.purchasedQty||0)).toLocaleString('en-IN'),'total in')+
-      statCard('Sold qty',Number(Math.round(k.soldQty||0)).toLocaleString('en-IN'),'total out')+
-      statCard('Returned qty',Number(Math.round(k.returnedQty||0)).toLocaleString('en-IN'),'back into stock')+
-      statCard('Stock left',Number(Math.round(k.totalStock)).toLocaleString('en-IN'),'purchased − sold + returned')+
-      statCard('Sell-through',(k.sellThru||0).toFixed(1)+'%','of purchased qty sold')+
-      statCard('Items tracked',Number(k.items).toLocaleString('en-IN'))+
+      statCard('Purchased qty',nnum(Math.round(k.purchasedQty||0)),'total in')+
+      statCard('Sold qty',nnum(Math.round(k.soldQty||0)),'total out')+
+      statCard('Returned qty',nnum(Math.round(k.returnedQty||0)),'back into stock')+
+      statCard('Stock left',nnum(Math.round(k.totalStock)),'purchased − sold + returned')+
+      statCard('Sell-through',nf(k.sellThru,1)+'%','of purchased qty sold')+
+      statCard('Items tracked',nnum(k.items))+
       statCard('Stock value',inrS(k.stockValue))+
-      statCard('🚨 Urgent (Red+Black)',Number(k.urgent).toLocaleString('en-IN'),'lost-sale risk')+
-      statCard('🟣 Overstock',Number(k.overstock).toLocaleString('en-IN'),'reduce buying')+
-      statCard('A-class items',Number(k.aItems).toLocaleString('en-IN'),Math.round(k.aGpShare)+'% of GP')+'</div>';
+      statCard('🚨 Urgent (Red+Black)',nnum(k.urgent),'lost-sale risk')+
+      statCard('🟣 Overstock',nnum(k.overstock),'reduce buying')+
+      statCard('A-class items',nnum(k.aItems),Math.round(k.aGpShare)+'% of GP')+'</div>';
     imsBands(); imsPareto(); imsPills(); imsRender();
   }).catch(function(e){ if($('ims-kpi'))$('ims-kpi').innerHTML=connBox(e); });
 }
@@ -1853,13 +1855,13 @@ function imsPareto(){
   var el=echInit('ims-pareto',Math.max(320,top.length*26+90)); if(!el)return;
   el.setOption({ backgroundColor:'transparent', grid:{left:8,right:52,top:24,bottom:8,containLabel:true},
     tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'rgba(20,20,32,.95)',borderColor:'rgba(255,255,255,.12)',textStyle:{color:'#eef0f7'},
-      formatter:function(p){ var i=p[0].dataIndex,x=top[i]; return '<b>'+x.item+'</b><br>GP: '+inr(x.gp)+'<br>Cumulative: '+x.cumPct.toFixed(1)+'%<br>Class: '+x.abc; }},
+      formatter:function(p){ var i=p[0].dataIndex,x=top[i]; return '<b>'+x.item+'</b><br>GP: '+inr(x.gp)+'<br>Cumulative: '+nf(x.cumPct,1)+'%<br>Class: '+x.abc; }},
     xAxis:[{type:'value',axisLabel:{color:'#9aa0b4',formatter:function(v){return inrShort(v);}},splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
            {type:'value',max:100,position:'top',axisLabel:{color:'#9aa0b4',formatter:'{value}%'},splitLine:{show:false}}],
     yAxis:{type:'category',inverse:true,data:top.map(function(x){return x.item.length>26?x.item.slice(0,26)+'…':x.item;}),axisLabel:{color:'#c2c7d6',fontSize:11.5}},
     series:[{type:'bar',data:top.map(function(x){return {value:Math.round(x.gp),itemStyle:{color:x.abc==='A'?'#7c5cff':(x.abc==='B'?'#46b5ff':'#5a6072'),borderRadius:[0,6,6,0]}};}),barWidth:'62%',
       label:{show:true,position:'right',color:'#9aa0b4',fontSize:10.5,formatter:function(p){return top[p.dataIndex].abc;}}},
-     {type:'line',xAxisIndex:1,data:top.map(function(x){return +x.cumPct.toFixed(1);}),smooth:true,symbol:'circle',symbolSize:5,lineStyle:{color:'#ffb347',width:2},itemStyle:{color:'#ffb347'}}]
+     {type:'line',xAxisIndex:1,data:top.map(function(x){return +nf(x.cumPct,1);}),smooth:true,symbol:'circle',symbolSize:5,lineStyle:{color:'#ffb347',width:2},itemStyle:{color:'#ffb347'}}]
   });
 }
 function imsPills(){
@@ -1890,7 +1892,7 @@ function imsRender(){
           '<span class="role-pill">'+x.abc+'</span>',
           Math.round(x.bought),Math.round(x.sold),Math.round(x.returned||0),
           (x.stock<0?'<span style="color:#ff97a2">'+Math.round(x.stock)+'</span>':'<b>'+Math.round(x.stock)+'</b>'),
-          x.cpd.toFixed(2),
+          nf(x.cpd,2),
           Math.round(x.max),
           Math.round(x.pct>999?999:x.pct)+'%',
           '<span class="badge" style="background:'+m.c+'22;color:'+m.c+';border:1px solid '+m.c+'55">'+m.n+'</span>',
