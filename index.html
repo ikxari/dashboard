@@ -400,6 +400,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="topbar">
       <div class="logo"><div class="dot"><svg width="20" height="20" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="17" r="6.5" fill="white"/><rect x="25.5" y="27" width="13" height="23" rx="6.5" fill="white"/></svg></div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion · <span id="buildTag">F2</span></div></div></div>
       <div class="uchip"><div class="av" id="u-av">S</div><div><div class="un" id="u-name">User</div><div class="ur" id="u-role">Role</div></div></div>
+      <button class="btn ghost sm" onclick="exportPDF()" title="Download this page as a PDF">⬇️ PDF</button>
       <button class="btn ghost sm" onclick="doLogout()">Sign Out</button>
     </div>
     <div class="nav" id="nav"></div>
@@ -446,7 +447,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycby1ljgBoPhT-zOUh-crod2UJWb3uLj957EvWgTdXcTYCOHsxQiUQwi63vEENuFMg-Bm/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycbzoCfkuUGOpQyGupo_s27i7OGrsQwiIdPMQ1IQNJRILjE0PC6sKU-GHh3mteSag38CR/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -575,7 +576,7 @@ function canSee(id){
 }
 
 let CONFIG={maintenance:{},notice:{on:false}};
-var UI_BUILD='F2-nav15';
+var UI_BUILD='F3-en+pdf';
 function enterApp(user){
   ME=user;
   var bt=$('buildTag'); if(bt) bt.textContent=UI_BUILD;
@@ -652,6 +653,79 @@ let DATE_FROM='', DATE_TO='', FORCE_FRESH=false;
 function iso(d){ return d.toISOString().slice(0,10); }
 function dp(){ return {from:DATE_FROM, to:DATE_TO}; }
 function dapi(action){ var f=FORCE_FRESH; FORCE_FRESH=false; return api({action:action,token:tGet(),from:DATE_FROM,to:DATE_TO,fresh:f}); }
+/* ---------- universal PDF export: prints whatever the current page shows ---------- */
+function pageTitle(){ var t=TABS.find(function(x){return x.id===CUR;}); return t?t.label:'Report'; }
+function exportPDF(){
+  var src=$('content'); if(!src) return toast('Nothing to export','err');
+  var clone=src.cloneNode(true);
+  // strip anything that makes no sense on paper
+  clone.querySelectorAll('button, input, select, textarea, .chip, .datebar, .pill, #pk-panel, #pk-fab')
+       .forEach(function(el){ el.remove(); });
+  // charts are canvases — snapshot them as images so they survive printing
+  var srcCanvas=src.querySelectorAll('canvas'), dstCanvas=clone.querySelectorAll('canvas');
+  for(var i=0;i<dstCanvas.length;i++){
+    try{
+      var img=document.createElement('img');
+      img.src=srcCanvas[i].toDataURL('image/png',1.0);
+      img.style.cssText='width:100%;max-width:100%;height:auto;display:block';
+      dstCanvas[i].parentNode.replaceChild(img,dstCanvas[i]);
+    }catch(e){ dstCanvas[i].remove(); }
+  }
+  // ECharts renders to SVG/canvas inside a div — grab those too
+  var srcEch=src.querySelectorAll('.chartbox div[_echarts_instance_]');
+  var dstEch=clone.querySelectorAll('.chartbox div[_echarts_instance_]');
+  for(var j=0;j<dstEch.length;j++){
+    try{
+      var inst=echarts.getInstanceByDom(srcEch[j]);
+      if(inst){
+        var im=document.createElement('img');
+        im.src=inst.getDataURL({pixelRatio:2,backgroundColor:'#ffffff'});
+        im.style.cssText='width:100%;max-width:100%;height:auto;display:block';
+        dstEch[j].parentNode.replaceChild(im,dstEch[j]);
+      }
+    }catch(e){}
+  }
+  var range=(DATE_FROM||DATE_TO) ? ((DATE_FROM||'start')+' to '+(DATE_TO||'today')) : 'All time';
+  var w=window.open('','_blank','width=1100,height=800');
+  if(!w) return toast('Allow pop-ups to export a PDF','err');
+  w.document.write(
+   '<!doctype html><html><head><meta charset="utf-8"><title>Ikxari — '+esc(pageTitle())+'</title>'+
+   '<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">'+
+   '<style>'+
+   '*{box-sizing:border-box;font-family:Jost,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+   'body{margin:0;padding:26px;background:#fff;color:#101322;font-size:12.5px}'+
+   '.rh{border-bottom:2px solid #4338ca;padding-bottom:11px;margin-bottom:18px;display:flex;align-items:flex-end;gap:14px}'+
+   '.rh h1{margin:0;font-size:21px;font-weight:700}'+
+   '.rh .s{font-size:11px;color:#6b7280;margin-top:3px}'+
+   '.rh .r{margin-left:auto;text-align:right;font-size:11px;color:#6b7280}'+
+   '.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px}'+
+   '.stat{border:1px solid #e4e7ee;border-radius:9px;padding:10px 12px;background:#f8f9fc;page-break-inside:avoid}'+
+   '.stat .n{font-size:16px;font-weight:700;color:#101322}'+
+   '.stat .n .kfull{display:block;font-size:10.5px;color:#6b7280;font-weight:600}'+
+   '.stat .l{font-size:9.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-top:3px}'+
+   '.stat .bar,.desc.small{display:none}'+
+   '.box,.chartbox{border:1px solid #e4e7ee;border-radius:10px;padding:13px 15px;margin-bottom:14px;page-break-inside:avoid;background:#fff}'+
+   '.box h4,.chartbox h4{margin:0 0 10px;font-size:13px;font-weight:600;color:#312e81}'+
+   'table{width:100%;border-collapse:collapse;font-size:11px}'+
+   'th{background:#4338ca;color:#fff;text-align:left;padding:6px 8px;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px}'+
+   'td{padding:5px 8px;border-bottom:1px solid #eef0f6}'+
+   'tr:nth-child(even) td{background:#fafbfd}'+
+   '.tablewrap{overflow:visible;max-height:none}'+
+   '.empty,.soon{color:#9aa0b4;text-align:center;padding:14px}'+
+   '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}'+
+   '.ft{margin-top:20px;border-top:1px solid #e4e7ee;padding-top:8px;font-size:9px;color:#9aa0b4;text-align:center}'+
+   '@page{size:A4 portrait;margin:11mm}'+
+   '</style></head><body>'+
+   '<div class="rh"><div><h1>IKXARI · '+esc(pageTitle())+'</h1>'+
+     '<div class="s">M/S S.P. Fashion, Purulia — Beyond Fashion</div></div>'+
+     '<div class="r">Period: '+esc(range)+'<br>Generated '+new Date().toLocaleString('en-IN')+
+     '<br>By '+esc(ME&&ME.fullName?ME.fullName:'')+'</div></div>'+
+   clone.innerHTML+
+   '<div class="ft">IKXARI ERP · Built by Somnath Karmakar</div>'+
+   '</body></html>');
+  w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} }, 700);
+}
 function refreshTab(){ FORCE_FRESH=true; openTab(CUR); }
 function dateBar(){
   return '<div class="datebar">'+
@@ -1111,6 +1185,32 @@ function loadPurchaseFeed(silent){
     });
     $('pe-feed').innerHTML=h||noData('No purchases yet.');
   }).catch(()=>{});
+}
+function savePLine(id){
+  var body={action:'editPurchase',token:tGet(),id:id,dist:val('ep-dist'),item:val('ep-item'),
+            cost:val('ep-cost'),qty:val('ep-qty'),sell:val('ep-sell')};
+  api(body).then(function(d){
+    if(!d.ok)return toast(d.error||'Could not save','err');
+    closeForm(); toast('Purchase line updated','ok'); loadPurchaseFeed(); loadStockMini();
+  }).catch(function(){ toast('Network error','err'); });
+}
+function delPLine(id){
+  modalConfirm({icon:'🗑️',title:'Delete line',message:'Remove this purchase line? Stock will be adjusted.',
+    confirmText:'Delete',danger:true,onConfirm:function(){
+      api({action:'deletePurchase',token:tGet(),id:id}).then(function(d){
+        if(!d.ok)return toast(d.error||'Could not delete','err');
+        toast('Line deleted','ok'); loadPurchaseFeed(); loadStockMini();
+      }).catch(function(){ toast('Network error','err'); });
+    }});
+}
+function delPInvoice(inv){
+  modalConfirm({icon:'🗑️',title:'Delete invoice',message:'Remove every line of invoice '+inv+'? Stock will be adjusted.',
+    confirmText:'Delete invoice',danger:true,onConfirm:function(){
+      api({action:'deletePurchaseInvoice',token:tGet(),invoice:inv}).then(function(d){
+        if(!d.ok)return toast(d.error||'Could not delete','err');
+        toast('Invoice deleted','ok'); loadPurchaseFeed(); loadStockMini();
+      }).catch(function(){ toast('Network error','err'); });
+    }});
 }
 function editPLine(id){
   const r=PFEED.find(x=>x.id===id); if(!r)return;
@@ -1683,7 +1783,7 @@ function loadIA(){
 }
 /* ---------- IMS (stock health + 80/20) ---------- */
 var IMS_DATA=null, IMS_FILTER='all';
-var IMS_COL={ purple:{c:'#b388ff',n:'Purple',t:'Overstock — buying kam karo'},
+var IMS_COL={ purple:{c:'#b388ff',n:'Purple',t:'Overstocked — reduce buying'},
               green :{c:'#37d399',n:'Green', t:'Healthy'},
               yellow:{c:'#ffb347',n:'Yellow',t:'Girr raha — reorder plan'},
               red   :{c:'#ff5d6c',n:'Red',   t:'Demand high — client kho rahe, 15-din review'},
@@ -1731,7 +1831,7 @@ function loadIMS(){
       statCard('Items tracked',Number(k.items).toLocaleString('en-IN'))+
       statCard('Stock value',inrS(k.stockValue))+
       statCard('🚨 Urgent (Red+Black)',Number(k.urgent).toLocaleString('en-IN'),'lost-sale risk')+
-      statCard('🟣 Overstock',Number(k.overstock).toLocaleString('en-IN'),'buying kam karo')+
+      statCard('🟣 Overstock',Number(k.overstock).toLocaleString('en-IN'),'reduce buying')+
       statCard('A-class items',Number(k.aItems).toLocaleString('en-IN'),Math.round(k.aGpShare)+'% of GP')+'</div>';
     imsBands(); imsPareto(); imsPills(); imsRender();
   }).catch(function(e){ if($('ims-kpi'))$('ims-kpi').innerHTML=connBox(e); });
@@ -1777,14 +1877,14 @@ function imsRender(){
     if(IMS_FILTER!=='all' && IMS_FILTER!=='A' && x.color!==IMS_FILTER)return false;
     return !q || x.item.toLowerCase().indexOf(q)>=0;
   });
-  if(!list.length){ $('ims-table').innerHTML=noData('Is filter me koi item nahi.'); return; }
+  if(!list.length){ $('ims-table').innerHTML=noData('No items match this filter.'); return; }
   $('ims-table').innerHTML='<p class="desc" style="margin-bottom:6px">'+list.length+' items</p>'+
     tbl(['Item','Class','Purchased','Sold','Returned','Left','Cons/day','Max level','% of max','Status','Action'],
       list.slice(0,150).map(function(x){ var m=IMS_COL[x.color];
         var act = x.color==='black' ? 'Urgent buy '+x.reorderQty
                 : x.color==='red'   ? 'Buy now '+x.reorderQty
                 : x.color==='yellow'? 'Reorder '+x.reorderQty
-                : x.color==='purple'? 'Buying kam karo'
+                : x.color==='purple'? 'Reduce buying'
                 : 'OK';
         return ['<b>'+esc(x.item)+'</b>',
           '<span class="role-pill">'+x.abc+'</span>',
@@ -2026,19 +2126,19 @@ function renderSettings(){
     '</div>'+
     (ME.role==='Super Admin'?(
     '<div class="box"><h4>🧠 Teach Parekh (AI Assistant)</h4>'+
-      '<p class="desc" style="margin-bottom:10px">Parekh ko custom jawab sikhao — keywords aane par wahi jawab dega. Sheet me permanently yaad rahega.</p>'+
+      '<p class="desc" style="margin-bottom:10px">Teach Parekh a custom answer. When these keywords appear, it replies with your answer. Stored permanently in the sheet.</p>'+
       '<div class="row2"><div class="field"><label>Trigger keywords (comma separated)</label><input id="br-kw" placeholder="e.g. return policy, wapsi, refund"></div>'+
       '<div class="field" style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" onclick="brainSave()">＋ Teach</button></div></div>'+
-      '<div class="field"><label>Answer</label><textarea id="br-ans" rows="3" placeholder="e.g. Product 7 din ke andar pakka bill ke saath return ho sakta hai." style="width:100%;background:var(--inp);border:1px solid var(--brd);border-radius:10px;color:var(--txt);padding:10px;font:inherit"></textarea></div>'+
+      '<div class="field"><label>Answer</label><textarea id="br-ans" rows="3" placeholder="e.g. Items can be returned within 7 days with the original bill." style="width:100%;background:var(--inp);border:1px solid var(--brd);border-radius:10px;color:var(--txt);padding:10px;font:inherit"></textarea></div>'+
       '<div id="br-list" style="margin-top:12px">'+loadingBox()+'</div>'+
     '</div>'):'')
   );
   if(ME.role==='Super Admin') brainList();
 }
 function brainList(){ if(!$('br-list'))return; apiS({action:'brainGet',token:tGet()}).then(function(d){ if(!$('br-list'))return; if(!d||!d.ok){ $('br-list').innerHTML=errBox(d); return; } var b=d.brain||[]; PK_BRAIN=b;
-  $('br-list').innerHTML='<p class="desc" style="margin-bottom:6px">Trained answers ('+b.length+')</p>'+(b.length?tbl(['Keywords','Answer',''],b.map(function(x){return [esc(x.keywords),'<span style="color:var(--muted)">'+esc((x.answer||'').slice(0,80))+((x.answer||'').length>80?'…':'')+'</span>','<button class="icbtn dng" onclick="brainDel('+x.row+')">Delete</button>'];})):'<p class="desc">Abhi tak kuch nahi sikhaya.</p>'); }).catch(function(e){ if($('br-list'))$('br-list').innerHTML=connBox(e); }); }
-function brainSave(){ var kw=val('br-kw'), ans=val('br-ans'); if(!kw||!ans)return toast('Keywords aur answer dono daalein','err'); apiS({action:'brainAdd',token:tGet(),keywords:kw,answer:ans}).then(function(d){ if(d&&d.ok){ toast('Parekh ne seekh liya 🧠','ok'); if($('br-kw'))$('br-kw').value=''; if($('br-ans'))$('br-ans').value=''; brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }
-function brainDel(r){ modalConfirm({title:'Delete',message:'Is trained answer ko delete karein?',icon:'🗑️',confirmText:'Delete',danger:true,onConfirm:function(){ apiS({action:'brainDelete',token:tGet(),row:r}).then(function(d){ if(d&&d.ok){ toast('Deleted','ok'); brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }}); }
+  $('br-list').innerHTML='<p class="desc" style="margin-bottom:6px">Trained answers ('+b.length+')</p>'+(b.length?tbl(['Keywords','Answer',''],b.map(function(x){return [esc(x.keywords),'<span style="color:var(--muted)">'+esc((x.answer||'').slice(0,80))+((x.answer||'').length>80?'…':'')+'</span>','<button class="icbtn dng" onclick="brainDel('+x.row+')">Delete</button>'];})):'<p class="desc">Nothing has been taught yet.</p>'); }).catch(function(e){ if($('br-list'))$('br-list').innerHTML=connBox(e); }); }
+function brainSave(){ var kw=val('br-kw'), ans=val('br-ans'); if(!kw||!ans)return toast('Enter both the keywords and the answer','err'); apiS({action:'brainAdd',token:tGet(),keywords:kw,answer:ans}).then(function(d){ if(d&&d.ok){ toast('Parekh has learned it 🧠','ok'); if($('br-kw'))$('br-kw').value=''; if($('br-ans'))$('br-ans').value=''; brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }
+function brainDel(r){ modalConfirm({title:'Delete',message:'Delete this trained answer?',icon:'🗑️',confirmText:'Delete',danger:true,onConfirm:function(){ apiS({action:'brainDelete',token:tGet(),row:r}).then(function(d){ if(d&&d.ok){ toast('Deleted','ok'); brainList(); } else toast((d&&(d.error||d.msg))||'Failed','err'); }).catch(function(){ toast('Network error','err'); }); }}); }
 function doChangePw(){
   const o=val('cp-old'),n=val('cp-new'),n2=val('cp-new2');
   if(!o||!n)return toast('Fill all fields','err');
@@ -2094,9 +2194,9 @@ function pkUser(t){ var b=$('pk-body'); if(!b)return; var d=document.createEleme
 function pkType(on){ var b=$('pk-body'); if(!b)return; if(on){ if($('pk-typing'))return; var d=document.createElement('div'); d.className='pk-typing'; d.id='pk-typing'; d.innerHTML='<i></i><i></i><i></i>'; b.appendChild(d); b.scrollTop=b.scrollHeight; } else { var e=$('pk-typing'); if(e)e.remove(); } }
 function pkChips(arr){ var c=$('pk-chips'); if(!c)return; c.innerHTML=(arr||[]).map(function(x){return '<button class="pk-chip" onclick="pkChip(this)">'+esc(x)+'</button>';}).join(''); }
 function pkChip(el){ var t=$('pk-text'); if(t){t.value=el.textContent;} pkSend(); }
-function pkSend(){ var t=$('pk-text'); if(!t)return; var q=(t.value||'').trim(); if(!q)return; t.value=''; pkUser(q); pkChips([]); pkType(true); setTimeout(function(){ try{ pkBrain(q); }catch(e){ pkType(false); pkBot('Sorry, kuch gadbad ho gayi — dobara try karein.'); } }, 320); }
+function pkSend(){ var t=$('pk-text'); if(!t)return; var q=(t.value||'').trim(); if(!q)return; t.value=''; pkUser(q); pkChips([]); pkType(true); setTimeout(function(){ try{ pkBrain(q); }catch(e){ pkType(false); pkBot('Something went wrong — please try again.'); } }, 320); }
 
-function pkHing(q){ if(/[\u0900-\u097F]/.test(q))return true; return /\b(kya|hai|hain|kaise|kaisa|kitna|kitne|dikha|dikhao|kholo|khol|batao|bata|aaj|kal|mera|meri|ka|ki|ke|ko|nahi|haan|bikri|kharch|kharcha|chahiye|wala|kaha|kahan|konsa|kaun|tum|aur|hua|karo)\b/i.test(q); }
+function pkHing(q){ return false; }   // replies are always in English; Hindi words are still understood
 function pkMonth(q){ var w=q.toLowerCase().replace(/[^a-z ]/g,' ').split(/\s+/);
   for(var i=0;i<w.length;i++){ var k=w[i]; if(k.length>=3){ for(var m in PK_MON){ if(k.indexOf(m)===0){ var mo=PK_MON[m],y=pkY(); return {from:y+'-'+('0'+(mo+1)).slice(-2)+'-01',to:iso(new Date(y,mo+1,0)),label:PK_MN[mo]+' '+y}; } } } } return null; }
 function pkRange(q){ if(/\b(today|aaj|aj)\b/.test(q)){var t=iso(new Date());return {from:t,to:t,label:'Today'};}
@@ -2110,25 +2210,25 @@ function pkNav(q){ var map=[['unrecorded purchase','purchase_entry'],['unrecorde
 function pkBrain(q0){
   var q=' '+q0.toLowerCase().replace(/[^\w\u0900-\u097F ]/g,' ').replace(/\s+/g,' ')+' ';
   var hi=pkHing(q0);
-  if(PK_PEND){ if(/\b(yes|haan|han|ha|ok|okay|sure|bhej|krdo|kardo|kar do|theek|thik|y|send)\b/.test(q)){ var qq=PK_PEND; PK_PEND=null; return pkTicket(qq); } if(/\b(no|nahi|na|cancel|rehne|chod|nope)\b/.test(q)){ PK_PEND=null; pkType(false); pkBot(hi?'Theek hai, nahi bheja. Aur kuch?':'Okay, not sent. Anything else?'); return; } }
+  if(PK_PEND){ if(/\b(yes|haan|han|ha|ok|okay|sure|bhej|krdo|kardo|kar do|theek|thik|y|send)\b/.test(q)){ var qq=PK_PEND; PK_PEND=null; return pkTicket(qq); } if(/\b(no|nahi|na|cancel|rehne|chod|nope)\b/.test(q)){ PK_PEND=null; pkType(false); pkBot('Okay, not sent. Anything else?'); return; } }
   if(ME&&ME.role==='Super Admin'&&/^(teach|train|seekh|sikha|sikhao|yaad rakho)\s*[:\-]/i.test(q0)){
     var bd=q0.replace(/^(teach|train|seekh|sikha|sikhao|yaad rakho)\s*[:\-]\s*/i,''); var pr=bd.split(/=>|\|\||::/);
-    if(pr.length<2||!pr[0].trim()||!pr.slice(1).join('').trim()){ pkType(false); pkBot('Format: <b>teach: keyword1, keyword2 =&gt; answer</b>\nExample:\nteach: return policy, wapsi => 7 din ke andar bill ke saath return ho sakta hai.'); return; }
+    if(pr.length<2||!pr[0].trim()||!pr.slice(1).join('').trim()){ pkType(false); pkBot('Format: <b>teach: keyword1, keyword2 =&gt; answer</b>\nExample:\nteach: return policy, refund => Items can be returned within 7 days with the original bill.'); return; }
     return pkTeach(pr[0].trim(), pr.slice(1).join('=>').trim());
   }
-  if(/\b(hi|hii|hello|helo|hey|namaste|namaskar|yo|good morning|good afternoon|good evening|kaise ho|kya haal|whats up)\b/.test(q)){ pkType(false); pkBot(hi?'Hello! Bataiye, kaise madad karun?':'Hello! How can I help?'); pkChips(["Today's sale","Top customers","Open GST","Expense report"]); return; }
-  if(/\b(thank|thanks|thx|dhanyavaad|shukriya|good job|great|nice|badhiya)\b/.test(q)){ pkType(false); pkBot(hi?'Khushi hui madad karke 🙂':'Happy to help 🙂'); return; }
-  if(/\b(bye|goodbye|alvida|chalta|chalti|tata|see you|good night)\b/.test(q)){ pkType(false); pkBot(hi?'Theek hai, milte hain! 👋':'See you! 👋'); return; }
-  if(/\b(who are you|tum kaun|aap kaun|kaun ho|kon ho|your name|naam kya|tumhara naam|aapka naam)\b/.test(q)){ pkType(false); pkBot(hi?'Main <b>Parekh</b> hoon — IKXARI ka AI ERP Assistant. Sales, GST, stock aur expense sab me madad karta hoon.':"I'm <b>Parekh</b>, your AI ERP Assistant for IKXARI — I help with sales, GST, stock & expenses."); return; }
-  if(/\b(what do you do|kya karte ho|aap kya karte|tum kya karte|kya kaam karte|kaam kya hai|kya kar sakti)\b/.test(q)){ pkType(false); pkBot((hi?'Main ye sab kar sakta hoon:':'Here\'s what I can do:')+'\n• Sales / revenue (recorded ya unrecorded)\n• GST & expenses\n• Top products & customers\n• Pages kholna (Inventory, GST, CRM…)\n• Data kis sheet se aata hai\n• Custom query → admin ko bhejna'); pkChips(["Today's sale","Unrecorded sale","Top products","Open GST"]); return; }
-  if(/\b(kisne banaya|kisne bnaya|who made you|who created|tumhe kisne|aapko kisne|developer|kis ne banaya)\b/.test(q)){ pkType(false); pkBot(hi?'Mujhe <b>Somnath Karmakar</b> ne IKXARI ke liye banaya hai.':'I was built by <b>Somnath Karmakar</b> for IKXARI.'); return; }
-  if(/\b(how are you|kaise ho|kaisे ho|kaisi ho|sab badhiya|sab theek|kya haal)\b/.test(q)){ pkType(false); pkBot(hi?'Main bilkul badhiya! Aap bataiye, kya dekhna hai?':"I'm doing great! What would you like to see?"); pkChips(["Today's sale","Top customers","Expense report"]); return; }
-  if(/^\s*(ok|okay|okk|acha|achha|hmm|hm|good|cool|theek|thik|done|great|nice|sahi)\s*$/.test(q)){ pkType(false); pkBot(hi?'👍 Aur kuch chahiye?':'👍 Anything else?'); return; }
-  if(/\b(time kya|kitne baje|what time|date kya|aaj ki date|kya tareekh)\b/.test(q)){ pkType(false); var n=new Date(); pkBot((hi?'Abhi: ':'Right now: ')+'<b>'+n.toLocaleString()+'</b>'); return; }
-  if(/\b(help|what can you|kya kar sakte|kya karte|madad|options|commands)\b/.test(q)){ pkType(false); pkBot((hi?'Main ye kar sakta hoon:':'I can help with:')+'\n• Sales / revenue (recorded ya unrecorded)\n• GST & expenses\n• Top products & customers\n• Pages kholna (Inventory, GST, CRM…)\n• Data kis sheet se aata hai\n• Custom query → admin ko bhejna'+((ME&&ME.role==='Super Admin')?'\n• <b>Mujhe sikhao</b>: "teach: keywords => answer"':'')); pkChips(["Today's sale","Unrecorded sale","Top products","Open Inventory"]); return; }
-  if(/\b(sheet|kahan se|kaha se|data source|kis sheet|database|kaha se aata)\b/.test(q)){ pkType(false); pkBot('<b>Data sources</b>\n• Sales → <b>Master_Sales_Sheet</b>\n• Purchases → <b>Master_Purchase_Sheet</b>\n• Live stock → <b>IKX_Inventory</b>\n• Cash sales / custom orders → <b>IKX_Sales</b> & <b>IKX_Orders</b>\n• Expenses → <b>Expense_Sheet</b>\n• Returns → <b>Master_SaleReturns_Sheet</b>\nSab kuch live Google Sheet se aata hai.'); return; }
+  if(/\b(hi|hii|hello|helo|hey|namaste|namaskar|yo|good morning|good afternoon|good evening|kaise ho|kya haal|whats up)\b/.test(q)){ pkType(false); pkBot('Hello! How can I help?'); pkChips(["Today's sale","Top customers","Open GST","Expense report"]); return; }
+  if(/\b(thank|thanks|thx|dhanyavaad|shukriya|good job|great|nice|badhiya)\b/.test(q)){ pkType(false); pkBot('Happy to help 🙂'); return; }
+  if(/\b(bye|goodbye|alvida|chalta|chalti|tata|see you|good night)\b/.test(q)){ pkType(false); pkBot('See you! 👋'); return; }
+  if(/\b(who are you|tum kaun|aap kaun|kaun ho|kon ho|your name|naam kya|tumhara naam|aapka naam)\b/.test(q)){ pkType(false); pkBot("I'm <b>Parekh</b>, your AI ERP Assistant for IKXARI — I help with sales, GST, stock and expenses."); return; }
+  if(/\b(what do you do|kya karte ho|aap kya karte|tum kya karte|kya kaam karte|kaam kya hai|kya kar sakti)\b/.test(q)){ pkType(false); pkBot('Here\'s what I can do:\n• Sales and revenue (recorded or unrecorded)\n• GST and expenses\n• Top products and customers\n• Open any page (Inventory, GST, CRM…)\n• Explain which sheet each figure comes from\n• Send anything I cannot answer to the admin'); pkChips(["Today's sale","Unrecorded sale","Top products","Open GST"]); return; }
+  if(/\b(kisne banaya|kisne bnaya|who made you|who created|tumhe kisne|aapko kisne|developer|kis ne banaya)\b/.test(q)){ pkType(false); pkBot('I was built by <b>Somnath Karmakar</b> for IKXARI.'); return; }
+  if(/\b(how are you|kaise ho|kaisे ho|kaisi ho|sab badhiya|sab theek|kya haal)\b/.test(q)){ pkType(false); pkBot("I'm doing great. What would you like to see?"); pkChips(["Today's sale","Top customers","Expense report"]); return; }
+  if(/^\s*(ok|okay|okk|acha|achha|hmm|hm|good|cool|theek|thik|done|great|nice|sahi)\s*$/.test(q)){ pkType(false); pkBot('👍 Anything else?'); return; }
+  if(/\b(time kya|kitne baje|what time|date kya|aaj ki date|kya tareekh)\b/.test(q)){ pkType(false); var n=new Date(); pkBot('Right now: '+'<b>'+n.toLocaleString()+'</b>'); return; }
+  if(/\b(help|what can you|kya kar sakte|kya karte|madad|options|commands)\b/.test(q)){ pkType(false); pkBot('I can help with:\n• Sales and revenue (recorded or unrecorded)\n• GST and expenses\n• Top products and customers\n• Opening any page (Inventory, GST, CRM…)\n• Which sheet each figure comes from\n• Sending anything I cannot answer to the admin'+((ME&&ME.role==='Super Admin')?'\n• <b>Teach me</b>: "teach: keywords => answer"':'')); pkChips(["Today's sale","Unrecorded sale","Top products","Open Inventory"]); return; }
+  if(/\b(sheet|kahan se|kaha se|data source|kis sheet|database|kaha se aata)\b/.test(q)){ pkType(false); pkBot('<b>Data sources</b>\n• Sales → <b>Master_Sales_Sheet</b>\n• Purchases → <b>Master_Purchase_Sheet</b>\n• Live stock → <b>IKX_Inventory</b>\n• Cash sales / custom orders → <b>IKX_Sales</b> & <b>IKX_Orders</b>\n• Expenses → <b>Expense_Sheet</b>\n• Returns → <b>Master_SaleReturns_Sheet</b>\nEverything is read live from the Google Sheet.'); return; }
 
-  if(/\b(open|kholo|khol|go to|jao|navigate|switch|le chalo)\b/.test(q)){ var pid=pkNav(q); if(pid){ if(typeof canSee==='function'&&!canSee(pid)){ pkType(false); pkBot(hi?'Us page ka access aapke role ko nahi hai.':"You don't have access to that page."); return; } pkType(false); var lbl=((TABS.find(function(t){return t.id===pid;})||{}).label)||pid; pkBot((hi?'Khol raha hoon: ':'Opening: ')+'<b>'+esc(lbl)+'</b>'); openTab(pid); if(window.innerWidth<700){PK_OPEN=false;$('pk-panel').classList.remove('on');} return; } }
+  if(/\b(open|kholo|khol|go to|jao|navigate|switch|le chalo)\b/.test(q)){ var pid=pkNav(q); if(pid){ if(typeof canSee==='function'&&!canSee(pid)){ pkType(false); pkBot("You don't have access to that page."); return; } pkType(false); var lbl=((TABS.find(function(t){return t.id===pid;})||{}).label)||pid; pkBot('Opening: '+'<b>'+esc(lbl)+'</b>'); openTab(pid); if(window.innerWidth<700){PK_OPEN=false;$('pk-panel').classList.remove('on');} return; } }
 
   var unrec=/\b(unrecord|unrecorded|un record|pos|cash sale|custom order|salesboy|sales boy|ikx)\b/.test(q);
   var wSales=/\b(sale|sales|revenue|bikri|turnover|becha|business)\b/.test(q),
@@ -2139,33 +2239,33 @@ function pkBrain(q0){
   if(!wSales&&!wGST&&!wExp&&!wTopP&&!wTopC&&rng&&PK_CTX.intent){ var it=PK_CTX.intent; if(it==='sales')wSales=true;else if(it==='usales'){wSales=true;unrec=true;}else if(it==='gst')wGST=true;else if(it==='exp')wExp=true;else if(it==='topp')wTopP=true;else if(it==='topc')wTopC=true; }
 
   if(wSales&&unrec){ var ru=rng||{from:'',to:'',label:'All time'}; PK_CTX={intent:'usales',from:ru.from,to:ru.to,label:ru.label};
-    return pkData('salesAnalytics',ru,function(d){ var t=d.totals||{}; if(!t.orders&&!t.sales){ pkBot(hi?('<b>'+esc(ru.label)+'</b> me koi unrecorded sale nahi hui.'):('No unrecorded sales for <b>'+esc(ru.label)+'</b>.')); return; } pkBot('🧾 <b>Unrecorded sales — '+esc(ru.label)+'</b>\n<div class="pk-k"><span>Total sales</span><span>'+inr(t.sales)+'</span></div><div class="pk-k"><span>Orders</span><span>'+(t.orders||0)+'</span></div><div class="pk-k"><span>Items qty</span><span>'+(t.qty||0)+'</span></div><div class="pk-k"><span>Avg / day</span><span>'+inr(t.avgDaily)+'</span></div>'); pkChips(['Top products','Open Unrecorded Sales']); }); }
+    return pkData('salesAnalytics',ru,function(d){ var t=d.totals||{}; if(!t.orders&&!t.sales){ pkBot('No unrecorded sales for <b>'+esc(ru.label)+'</b>.'); return; } pkBot('🧾 <b>Unrecorded sales — '+esc(ru.label)+'</b>\n<div class="pk-k"><span>Total sales</span><span>'+inr(t.sales)+'</span></div><div class="pk-k"><span>Orders</span><span>'+(t.orders||0)+'</span></div><div class="pk-k"><span>Items qty</span><span>'+(t.qty||0)+'</span></div><div class="pk-k"><span>Avg / day</span><span>'+inr(t.avgDaily)+'</span></div>'); pkChips(['Top products','Open Unrecorded Sales']); }); }
 
   if(wTopP||wTopC){ var r=rng||{from:'',to:'',label:'All time'}; PK_CTX={intent:wTopP?'topp':'topc',from:r.from,to:r.to,label:r.label};
-    return pkData('getSales',r,function(d){ var arr=(wTopP?(d.revByProduct||[]):(d.topCustomers||[])).slice(0,5); if(!arr.length){pkBot(hi?'Us period me data nahi mila.':'No data for that period.');return;} pkBot((wTopP?'🏆 Top products — ':'🏆 Top customers — ')+'<b>'+esc(r.label)+'</b>\n'+arr.map(function(x,i){return (i+1)+'. '+esc(x.name)+' — '+inr(x.value)+(x.qty?' ('+x.qty+' qty)':'');}).join('\n')); }); }
+    return pkData('getSales',r,function(d){ var arr=(wTopP?(d.revByProduct||[]):(d.topCustomers||[])).slice(0,5); if(!arr.length){pkBot('No data for that period.');return;} pkBot((wTopP?'🏆 Top products — ':'🏆 Top customers — ')+'<b>'+esc(r.label)+'</b>\n'+arr.map(function(x,i){return (i+1)+'. '+esc(x.name)+' — '+inr(x.value)+(x.qty?' ('+x.qty+' qty)':'');}).join('\n')); }); }
   if(wExp){ var r2=rng||{from:'',to:'',label:'All time'}; PK_CTX={intent:'exp',from:r2.from,to:r2.to,label:r2.label};
     return pkData('getExpense',r2,function(d){ var k=d.kpis||{}, cats=(d.cats||[]).slice().sort(function(a,b){return (b.value||b.amount||0)-(a.value||a.amount||0);}), top=cats[0]; pkBot('💸 <b>Expenses — '+esc(r2.label)+'</b>\n<div class="pk-k"><span>Total spend</span><span>'+inr(k.total)+'</span></div><div class="pk-k"><span>Categories</span><span>'+(k.categories||cats.length||0)+'</span></div>'+(top?'<div class="pk-k"><span>Biggest · '+esc(top.name||top.cat||'-')+'</span><span>'+inr(top.value||top.amount)+'</span></div>':'')); }); }
   if(wGST){ var r3=rng||{from:'',to:'',label:'All time'}; PK_CTX={intent:'gst',from:r3.from,to:r3.to,label:r3.label};
     return pkData('getSales',r3,function(d){ var k=d.kpis||{}; pkBot('🧾 <b>GST — '+esc(r3.label)+'</b>\n<div class="pk-k"><span>GST collected</span><span>'+inr(k.gst)+'</span></div><div class="pk-k"><span>Taxable revenue</span><span>'+inr(k.netSales)+'</span></div><div class="pk-k"><span>Total revenue</span><span>'+inr(k.revenue)+'</span></div>'); }); }
   if(wSales){ var r4=rng||{from:'',to:'',label:'All time'}; PK_CTX={intent:'sales',from:r4.from,to:r4.to,label:r4.label};
-    return pkData('getSales',r4,function(d){ var k=d.kpis||{}; if(!k.orders&&!k.revenue){pkBot((hi?('<b>'+esc(r4.label)+'</b> me koi recorded sale nahi mili.'):('No recorded sales for <b>'+esc(r4.label)+'</b>.'))+'\n'+(hi?'POS / daily entries ke liye "unrecorded sale" poochein.':'For POS entries, ask "unrecorded sale".'));return;} pkBot('📊 <b>Sales — '+esc(r4.label)+'</b>\n<div class="pk-k"><span>Revenue</span><span>'+inr(k.revenue)+'</span></div><div class="pk-k"><span>Bills</span><span>'+(k.orders||0)+'</span></div><div class="pk-k"><span>Customers</span><span>'+(k.customers||0)+'</span></div><div class="pk-k"><span>Avg bill</span><span>'+inr(k.abv)+'</span></div><div class="pk-k"><span>GST</span><span>'+inr(k.gst)+'</span></div>'); pkChips(['Top products','Top customers','Unrecorded sale']); }); }
+    return pkData('getSales',r4,function(d){ var k=d.kpis||{}; if(!k.orders&&!k.revenue){pkBot(('No recorded sales for <b>'+esc(r4.label)+'</b>.')+'\n'+'For POS entries, ask "unrecorded sale".');return;} pkBot('📊 <b>Sales — '+esc(r4.label)+'</b>\n<div class="pk-k"><span>Revenue</span><span>'+inr(k.revenue)+'</span></div><div class="pk-k"><span>Bills</span><span>'+(k.orders||0)+'</span></div><div class="pk-k"><span>Customers</span><span>'+(k.customers||0)+'</span></div><div class="pk-k"><span>Avg bill</span><span>'+inr(k.abv)+'</span></div><div class="pk-k"><span>GST</span><span>'+inr(k.gst)+'</span></div>'); pkChips(['Top products','Top customers','Unrecorded sale']); }); }
 
   // custom-trained brain (Super Admin taught) → before fallback
   var bm=pkBrainMatch(q); if(bm){ pkType(false); pkBot(esc(bm.answer)); return; }
   // bare month / today (no metric) → calculated snapshot
   if(rng){ PK_CTX={intent:'sales',from:rng.from,to:rng.to,label:rng.label};
     return pkData('getSales',rng,function(d){ var k=d.kpis||{}, tc=(d.topCustomers||[])[0];
-      if(!k.orders&&!k.revenue){ pkBot((hi?('<b>'+esc(rng.label)+'</b> me recorded sale nahi mili.'):('No recorded sales for <b>'+esc(rng.label)+'</b>.'))+'\n'+(hi?'Unrecorded ke liye "unrecorded '+esc(rng.label)+'" poochein.':'Try "unrecorded sale".')); return; }
+      if(!k.orders&&!k.revenue){ pkBot(('No recorded sales for <b>'+esc(rng.label)+'</b>.')+'\n'+'For unrecorded sales, ask "unrecorded '+esc(rng.label)+'".'); return; }
       pkBot('📅 <b>'+esc(rng.label)+' — snapshot</b>\n<div class="pk-k"><span>Revenue</span><span>'+inr(k.revenue)+'</span></div><div class="pk-k"><span>Bills</span><span>'+(k.orders||0)+'</span></div><div class="pk-k"><span>Customers</span><span>'+(k.customers||0)+'</span></div><div class="pk-k"><span>GST</span><span>'+inr(k.gst)+'</span></div>'+(tc?'<div class="pk-k"><span>Top customer</span><span>'+esc(tc.name)+'</span></div>':'')); pkChips(['Unrecorded '+rng.label,'Top products','GST '+rng.label]); }); }
 
   pkType(false); PK_PEND=q0;
-  pkBot(hi?'Iska exact jawab mere paas nahi hai. Kya main ye query <b>admin ko bhej du</b>?':"I don't have an exact answer. Should I <b>send this query to the admin</b>?");
-  pkChips(['Haan, bhej do','Nahi']);
+  pkBot("I don't have an exact answer for that. Should I <b>send this question to the admin</b>?");
+  pkChips(['Yes, send it','No thanks']);
 }
 function pkBrainMatch(q){ var best=null,bs=0; for(var i=0;i<PK_BRAIN.length;i++){ var phr=(PK_BRAIN[i].keywords||'').toLowerCase().split(',').map(function(x){return x.trim();}).filter(Boolean); var sc=0; for(var j=0;j<phr.length;j++){ if(phr[j]&&q.indexOf(phr[j])>=0)sc++; } if(sc>bs){bs=sc;best=PK_BRAIN[i];} } return bs>0?best:null; }
-function pkTeach(kw,ans){ pkType(true); apiS({action:'brainAdd',token:tGet(),keywords:kw,answer:ans}).then(function(d){ pkType(false); if(d&&d.ok){ pkBot('🧠 Seekh liya! Ab "<b>'+esc(kw)+'</b>" aane par main ye jawab dunga.'); apiS({action:'brainGet',token:tGet()}).then(function(r){ if(r&&r.ok)PK_BRAIN=r.brain||[]; }); } else { pkBot('Save nahi hua: '+((d&&(d.error||d.msg))||'permission/error')); } }).catch(function(){ pkType(false); pkBot('Network issue — train nahi hua.'); }); }
-function pkData(action,r,cb){ apiS({action:action,token:tGet(),from:r.from||'',to:r.to||''}).then(function(d){ pkType(false); if(!d||!d.ok){ pkBot('Data load nahi ho paya. ('+((d&&(d.error||d.msg))||'error')+')'); return; } cb(d); }).catch(function(){ pkType(false); pkBot('Server se connect nahi ho paya.'); }); }
-function pkTicket(q){ pkType(true); apiS({action:'supportTicket',token:tGet(),query:q,page:(typeof CUR!=='undefined'?CUR:'')}).then(function(d){ pkType(false); pkBot((d&&d.ok)?'✅ Aapki query admin ko bhej di gayi hai — jaldi reply milega.':'Query bhejne me dikkat aayi, baad me try karein.'); }).catch(function(){ pkType(false); pkBot('Network issue — query nahi bheji ja saki.'); }); }
+function pkTeach(kw,ans){ pkType(true); apiS({action:'brainAdd',token:tGet(),keywords:kw,answer:ans}).then(function(d){ pkType(false); if(d&&d.ok){ pkBot('🧠 Learned. From now on I will give this answer when "<b>'+esc(kw)+'</b>" comes up.'); apiS({action:'brainGet',token:tGet()}).then(function(r){ if(r&&r.ok)PK_BRAIN=r.brain||[]; }); } else { pkBot('Could not save: '+((d&&(d.error||d.msg))||'permission error')); } }).catch(function(){ pkType(false); pkBot('Network problem — nothing was saved.'); }); }
+function pkData(action,r,cb){ apiS({action:action,token:tGet(),from:r.from||'',to:r.to||''}).then(function(d){ pkType(false); if(!d||!d.ok){ pkBot('Could not load the data. ('+((d&&(d.error||d.msg))||'error')+')'); return; } cb(d); }).catch(function(){ pkType(false); pkBot('Could not reach the server.'); }); }
+function pkTicket(q){ pkType(true); apiS({action:'supportTicket',token:tGet(),query:q,page:(typeof CUR!=='undefined'?CUR:'')}).then(function(d){ pkType(false); pkBot((d&&d.ok)?'✅ Your question has been sent to the admin. You should get a reply soon.':'The question could not be sent. Please try again later.'); }).catch(function(){ pkType(false); pkBot('Network problem — the question could not be sent.'); }); }
 
 </script>
 </body>
