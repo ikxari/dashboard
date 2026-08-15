@@ -398,7 +398,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <div class="app" id="appView">
   <div class="apphead">
     <div class="topbar">
-      <div class="logo"><div class="dot"><svg width="20" height="20" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="17" r="6.5" fill="white"/><rect x="25.5" y="27" width="13" height="23" rx="6.5" fill="white"/></svg></div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion</div></div></div>
+      <div class="logo"><div class="dot"><svg width="20" height="20" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="17" r="6.5" fill="white"/><rect x="25.5" y="27" width="13" height="23" rx="6.5" fill="white"/></svg></div><div><h1>Ikxari</h1><div class="tag">Beyond Fashion · <span id="buildTag">F2</span></div></div></div>
       <div class="uchip"><div class="av" id="u-av">S</div><div><div class="un" id="u-name">User</div><div class="ur" id="u-role">Role</div></div></div>
       <button class="btn ghost sm" onclick="doLogout()">Sign Out</button>
     </div>
@@ -446,7 +446,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 /* ===================== CONFIG ===================== */
-const API = "https://script.google.com/macros/s/AKfycbyhKCW0Nz-mODUEhditEk-g_FvJ63caVY_yl0iGnksBMEhCT5GU8qKXHaurxSLdRE5s/exec";   // GAS /exec URL
+const API = "https://script.google.com/macros/s/AKfycby1ljgBoPhT-zOUh-crod2UJWb3uLj957EvWgTdXcTYCOHsxQiUQwi63vEENuFMg-Bm/exec";   // GAS /exec URL
 const DEVICE = (navigator.userAgent||"Unknown")+" | "+(navigator.platform||"");
 
 /* ===================== CORE ===================== */
@@ -547,36 +547,38 @@ function doReset(){
 /* ===================== APP ===================== */
 let ME=null;
 const TABS=[
-  {id:'overview', label:'Overview',        rank:5},
-  {id:'sales',    label:'Sales Analytics', rank:1},
-  {id:'returns',  label:'Sales Return',     rank:1},
-  {id:'purchase_entry', label:'Unrecorded Purchase', rank:4},
-  {id:'sales_entry',    label:'Unrecorded Sales',    rank:2},
+  /* ---- daily business (everyone) ---- */
+  {id:'reports',  label:'Summary',         rank:1},
+  {id:'sales',    label:'Sales',           rank:1},
+  {id:'ims',      label:'IMS Center',      rank:2},
   {id:'inventory',label:'Inventory',       rank:1},
-  {id:'itemanalysis', label:'Item Analysis', rank:4},
-  {id:'ims',      label:'IMS Center',      rank:1, soon:true},
   {id:'purchase', label:'Purchase',        rank:1},
-  {id:'crm',      label:'Customer CRM',    rank:1},
-  {id:'vendor',   label:'Vendor',          rank:2},
   {id:'gst',      label:'GST',             rank:2},
   {id:'expense',  label:'Expense',         rank:2},
-  {id:'reports',  label:'Reports',         rank:2},
-  {id:'users',    label:'User Management', rank:4},
-  {id:'activity', label:'Login Activity',  rank:5},
-  {id:'audit',    label:'Audit Log',       rank:5},
-  {id:'system',   label:'System',          rank:5},
+  {id:'crm',      label:'Customers',       rank:1},
+  /* ---- data entry ---- */
+  {id:'sales_entry',    label:'Unrecorded Sales',    rank:2},
+  {id:'purchase_entry', label:'Unrecorded Purchase', rank:4},
+  /* ---- deeper analysis ---- */
+  {id:'itemanalysis', label:'Item Analysis', rank:4},
+  {id:'returns',  label:'Sales Return',    rank:2},
+  /* ---- admin only ---- */
+  {id:'overview', label:'Admin',           rank:5},
+  {id:'users',    label:'Users',           rank:4},
   {id:'settings', label:'Settings',        rank:1}
 ];
 /* role-based visibility: Accountant→Purchase Entry + Inventory, Sales Exec→Sales Entry */
 function canSee(id){
-  if(ME.role==='Accountant')      return ['sales_entry','purchase_entry','inventory','gst','expense','reports','settings'].indexOf(id)>=0;
+  if(ME.role==='Accountant')      return ['reports','sales_entry','purchase_entry','inventory','ims','gst','expense','returns','settings'].indexOf(id)>=0;
   if(ME.role==='Sales Executive') return ['sales_entry','settings'].indexOf(id)>=0;
   const t=TABS.find(x=>x.id===id); return t? ME.rank>=t.rank : false;
 }
 
 let CONFIG={maintenance:{},notice:{on:false}};
+var UI_BUILD='F2-nav15';
 function enterApp(user){
   ME=user;
+  var bt=$('buildTag'); if(bt) bt.textContent=UI_BUILD;
   $('authView').style.display='none';
   $('appView').style.display='flex';
   $('u-name').textContent=user.fullName;
@@ -586,6 +588,10 @@ function enterApp(user){
   PK_GREETED=false; PK_CTX={intent:'',from:'',to:'',label:''}; PK_PEND=null; if($('pk-body'))$('pk-body').innerHTML=''; pkGreet();
   apiS({action:'brainGet',token:tGet()}).then(function(d){ if(d&&d.ok)PK_BRAIN=d.brain||[]; }).catch(function(){});
   loadConfig(()=>{ const first=TABS.find(t=>canSee(t.id)); openTab(first?first.id:'settings'); });
+  apiS({action:'getConfig',token:tGet()}).then(function(d){
+    var bt=$('buildTag'); if(!bt||!d)return;
+    bt.textContent = UI_BUILD + ' / api ' + (d.version||'?');
+  }).catch(function(){});
 }
 function loadConfig(cb){
   api({action:'getConfig',token:tGet()}).then(d=>{
@@ -616,13 +622,14 @@ function openTab(id){
     return setContent('<div class="maint"><div class="ic">🛠️</div><h3>'+esc(tab?tab.label:'Page')+' — Under Maintenance</h3><p>'+esc(CONFIG.maintenance[id])+'</p></div>');
   }
   if(tab && tab.soon)return renderSoon(tab.label);
-  if(id==='overview')return renderOverview();
+  if(id==='overview')return renderOverview();   // admin: users, logins, audit
   if(id==='sales')return renderSales();
   if(id==='returns')return renderReturns();
   if(id==='purchase_entry')return renderPurchaseEntry();
   if(id==='sales_entry')return renderSalesEntry();
   if(id==='inventory')return renderInventory();
   if(id==='itemanalysis')return renderItemAnalysis();
+  if(id==='ims')return renderIMS();
   if(id==='purchase')return renderPurchase();
   if(id==='crm')return renderCRM();
   if(id==='vendor')return renderVendor();
@@ -750,8 +757,18 @@ function loadingBox(){return '<div class="soon"><div class="ic">⏳</div><h3>Loa
 function noData(msg){return '<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg><span>'+esc(msg||'Nothing to show yet.')+'</span></div>';}
 
 /* ---------- Overview = Activity Monitor (Super Admin) ---------- */
+function adminSection(){
+  return '<div class="box"><h4>🗂️ More admin views</h4>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn ghost sm" onclick="renderActivity()">🔑 Login activity</button>'+
+      '<button class="btn ghost sm" onclick="renderAudit()">📜 Audit log</button>'+
+      '<button class="btn ghost sm" onclick="renderVendor()">🏭 Vendor performance</button>'+
+      '<button class="btn ghost sm" onclick="renderSystem()">🛠️ Maintenance &amp; notices</button>'+
+      '<button class="btn ghost sm" onclick="openTab(\'overview\')">← Back to admin</button>'+
+    '</div></div>';
+}
 function renderOverview(){
-  setContent(pagehead('Activity Monitor','Who\'s active, what changed, live system health','overview')+'<div id="ov">'+loadingBox()+'</div>');
+  setContent(adminSection()+pagehead('Activity Monitor','Who\'s active, what changed, live system health','overview')+'<div id="ov">'+loadingBox()+'</div>');
   api({action:'getMonitor',token:tGet()}).then(d=>{
     if(!d.ok)return($('ov').innerHTML=errBox(d)); const c=d.counts;
     $('ov').innerHTML=
@@ -1624,25 +1641,8 @@ function renderItemAnalysis(){
     '</div>'+
     '<div class="box"><h4>📊 Summary</h4><div id="ia-kpi">'+loadingBox()+'</div>'+
       '<p class="desc" style="margin-top:10px">No item selected = all items combined. Select one or many to compare.</p></div></div>'+
-    '<div class="chartbox"><h4>🧊 Date-wise sales (3D)</h4><div id="ia-chart">'+loadingBox()+'</div></div>'+
-    '<div class="box" style="border-color:rgba(124,92,255,.35)"><h4>📦 IMS — Stock health &amp; 80/20</h4>'+
-      '<p class="desc" style="margin-bottom:10px">Stock = Purchase − Sales. Max level = consumption/day × lead time × safety factor.</p>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'+
-        '<div class="field" style="margin:0"><label>Consumption window</label><select id="ims-win" onchange="loadIMS()"><option value="90">90 days</option><option value="180">180 days</option></select></div>'+
-        '<div class="field" style="margin:0"><label>Lead time (days)</label><input id="ims-lead" type="number" min="1" value="12" onchange="loadIMS()" style="width:110px"></div>'+
-        '<div class="field" style="margin:0"><label>Safety factor</label><input id="ims-sf" type="number" min="1" step="0.1" value="1.2" onchange="loadIMS()" style="width:110px"></div>'+
-        '<button class="btn ghost sm" onclick="loadIMS()">↻ Recalculate</button>'+
-      '</div>'+
-      '<div id="ims-note" class="desc" style="margin-top:8px"></div>'+
-    '</div>'+
-    '<div id="ims-kpi">'+loadingBox()+'</div>'+
-    '<div id="ims-bands"></div>'+
-    '<div class="chartbox"><h4>📈 Pareto 80/20 — GP contribution</h4><div id="ims-pareto">'+loadingBox()+'</div></div>'+
-    '<div class="box"><h4>🎯 Action list</h4>'+
-      '<div id="ims-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>'+
-      '<input id="ims-search" placeholder="search item…" oninput="imsRender()" style="margin-bottom:10px">'+
-      '<div id="ims-table">'+loadingBox()+'</div></div>');
-  loadIA(); loadIMS();
+    '<div class="chartbox"><h4>🧊 Date-wise sales (3D)</h4><div id="ia-chart">'+loadingBox()+'</div></div>');
+  loadIA();
 }
 function iaQuick(r){
   const t=new Date();
@@ -1688,6 +1688,27 @@ var IMS_COL={ purple:{c:'#b388ff',n:'Purple',t:'Overstock — buying kam karo'},
               yellow:{c:'#ffb347',n:'Yellow',t:'Girr raha — reorder plan'},
               red   :{c:'#ff5d6c',n:'Red',   t:'Demand high — client kho rahe, 15-din review'},
               black :{c:'#8a8f9e',n:'Black', t:'Stock out — emergency'} };
+function renderIMS(){
+  setContent(pagehead('IMS Center','Stock health, colour bands and 80/20 — live from Purchase, Sales and Returns','ims')+
+    '<div class="box" style="border-color:rgba(124,92,255,.35)"><h4>⚙️ Planning settings</h4>'+
+      '<p class="desc" style="margin-bottom:10px">Stock = purchased − sold + returned. Max level = consumption/day × lead time × safety factor.</p>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'+
+        '<div class="field" style="margin:0"><label>Consumption window</label><select id="ims-win" onchange="loadIMS()"><option value="90">90 days</option><option value="180">180 days</option></select></div>'+
+        '<div class="field" style="margin:0"><label>Lead time (days)</label><input id="ims-lead" type="number" min="1" value="12" onchange="loadIMS()" style="width:110px"></div>'+
+        '<div class="field" style="margin:0"><label>Safety factor</label><input id="ims-sf" type="number" min="1" step="0.1" value="1.2" onchange="loadIMS()" style="width:110px"></div>'+
+        '<button class="btn ghost sm" onclick="loadIMS()">↻ Recalculate</button>'+
+      '</div>'+
+      '<div id="ims-note" class="desc" style="margin-top:8px"></div>'+
+    '</div>'+
+    '<div id="ims-kpi">'+loadingBox()+'</div>'+
+    '<div id="ims-bands"></div>'+
+    '<div class="chartbox"><h4>📈 Pareto 80/20 — gross profit contribution</h4><div id="ims-pareto">'+loadingBox()+'</div></div>'+
+    '<div class="box"><h4>🎯 Action list</h4>'+
+      '<div id="ims-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>'+
+      '<input id="ims-search" placeholder="search item…" oninput="imsRender()" style="margin-bottom:10px">'+
+      '<div id="ims-table">'+loadingBox()+'</div></div>');
+  loadIMS();
+}
 function loadIMS(){
   if(!$('ims-kpi'))return;
   var win=val('ims-win')||'90', lead=val('ims-lead')||'12', sf=val('ims-sf')||'1.2';
